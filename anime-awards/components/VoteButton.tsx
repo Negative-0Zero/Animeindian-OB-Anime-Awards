@@ -3,13 +3,21 @@
 import { supabase } from '@/utils/supabase/client'
 import { useState, useEffect } from 'react'
 
+interface VoteButtonProps {
+  nomineeId: any
+  category: string
+  className?: string
+  children?: React.ReactNode  // 👈 OPTIONAL – no error when not passed
+  [key: string]: any          // allow any other props
+}
+
 export default function VoteButton({ 
   nomineeId, 
   category,
   className = "",
-  children,        //  accepts custom content
-  ...props         //  spread any extra props
-}) {
+  children,
+  ...props 
+}: VoteButtonProps) {
   const [voted, setVoted] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -79,4 +87,4 @@ export default function VoteButton({
       {loading ? 'Submitting...' : voted ? '✓ Voted!' : (children || '🗳️ Vote')}
     </button>
   )
-}
+        }

@@ -1,10 +1,10 @@
 'use client'
 
+import React from 'react'  // 👈 THIS MUST BE HERE
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
-import VoteButton from '@/components/VoteButton'
 import { Trophy, Calendar, Star, Flame, Heart, Zap, Clapperboard, Mic, Tv } from "lucide-react"
 
 // ─── SEASON CONFIG ─────────────────────────────────────────────
@@ -21,8 +21,8 @@ const SEASON = {
     timelineWinners: "With Otaku Bhaskar"
 }
 
-// ─── CATEGORY ICONS & STYLES ─────────────────────────────────
-const categoryStyles: Record<string, { icon: JSX.Element, color: string, gradient: string }> = {
+// ─── CATEGORY ICONS & STYLES – FIXED TYPE: React.ReactNode, NOT JSX.Element ───
+const categoryStyles: Record<string, { icon: React.ReactNode, color: string, gradient: string }> = {
     'Anime of the Season': {
         icon: <Trophy className="text-yellow-400" />,
         color: 'group-hover:border-yellow-500/50',
@@ -145,15 +145,13 @@ export default function Home() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <VoteButton
-                            nomineeId="hero-placeholder"
-                            category={SEASON.animeOf}
-                            isHero={true}
+                        <Link
+                            href={`/category/${categoryToSlug(SEASON.animeOf)}`}
                             className="w-full sm:w-auto px-8 py-4 bg-white text-slate-950 font-black text-lg rounded-full hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all flex items-center justify-center gap-2"
                         >
                             <Trophy size={20} className="text-yellow-600" />
                             VOTE NOW
-                        </VoteButton>
+                        </Link>
                         <button
                             onClick={showTimeline}
                             className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 backdrop-blur-md text-white font-bold text-lg rounded-full hover:bg-white/10 transition-all flex items-center justify-center gap-2"
@@ -187,7 +185,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* ─── CATEGORIES SECTION – DYNAMIC NOMINEES, NO VOTE COUNTS ─── */}
+            {/* ─── CATEGORIES SECTION ─────────────────────────── */}
             <section id="categories-section" className="max-w-7xl mx-auto px-4 py-12">
                 <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl">
                     <h2 className="text-3xl md:text-4xl font-bold mb-12 flex items-center justify-center gap-3 text-center">
@@ -198,60 +196,46 @@ export default function Home() {
                     {loading ? (
                         <p className="text-center text-gray-400">Loading nominees...</p>
                     ) : (
-                        <div className="space-y-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {Object.entries(categoryStyles).map(([catName, styles]) => {
-                                const nominees = nomineesByCategory[catName] || []
-
-                                if (nominees.length === 0) {
-                                    return (
-                                        <div key={catName} className="border border-white/10 rounded-2xl p-6">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="p-3 bg-white/5 rounded-lg">{styles.icon}</div>
-                                                <h3 className="text-2xl font-bold">{catName}</h3>
-                                            </div>
-                                            <p className="text-gray-400">No nominees added yet. Check back soon!</p>
-                                        </div>
-                                    )
-                                }
+                                const nomineeCount = nomineesByCategory[catName]?.length || 0
 
                                 return (
-                                    <div key={catName} className="border border-white/10 rounded-2xl p-6">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <div className="p-3 bg-white/5 rounded-lg">{styles.icon}</div>
-                                            <h3 className="text-2xl font-bold">{catName}</h3>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {nominees.map((nominee) => (
-                                                <div
-                                                    key={nominee.id}
-                                                    className="bg-slate-800/50 rounded-xl p-4 border border-white/5 hover:border-white/20 transition-all"
+                                    <div
+                                        key={catName}
+                                        className={`group relative bg-slate-900/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 ${styles.color} transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl`}
+                                    >
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${styles.gradient} to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl`}></div>
+                                        <div className="relative z-10">
+                                            <div className="mb-4 p-3 bg-white/5 w-fit rounded-lg border border-white/5">
+                                                {styles.icon}
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-2 text-white">{catName}</h3>
+                                            <p className="text-gray-400 text-sm leading-relaxed mb-2">
+                                                {nomineeCount} nominee{nomineeCount !== 1 ? 's' : ''}
+                                            </p>
+                                            <p className="text-gray-400 text-sm leading-relaxed mb-4">
+                                                {catName === SEASON.animeOf && SEASON.animeDesc}
+                                                {catName === SEASON.movieOf && SEASON.movieDesc}
+                                                {catName === 'Best Hindi Dub' && 'Voices that brought characters to life in our language.'}
+                                                {catName === 'Indian Theatrical Experience' && 'The movie that made the theatre go wild.'}
+                                                {catName === 'Best Shonen' && 'Hype, battles, and friendship.'}
+                                                {catName === 'Best Action' && 'Best animation and fight choreography.'}
+                                                {catName === 'Best Romance' && 'Stories that made our hearts flutter.'}
+                                                {catName === 'Best Isekai' && 'Truck-kun strikes again.'}
+                                                {catName === 'Bachpan Ka Pyaar' && 'Best Classic Anime (Nostalgia Award).'}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <Link
+                                                    href={`/category/${categoryToSlug(catName)}`}
+                                                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold px-6 py-3 rounded-full text-sm transition-all shadow-lg inline-flex items-center justify-center"
                                                 >
-                                                    {nominee.image_url && (
-                                                        <img
-                                                            src={nominee.image_url}
-                                                            alt={nominee.title}
-                                                            className="w-full h-32 object-cover rounded-lg mb-3"
-                                                        />
-                                                    )}
-                                                    <h4 className="font-bold text-lg">{nominee.title}</h4>
-                                                    {nominee.anime_name && (
-                                                        <p className="text-sm text-gray-400">{nominee.anime_name}</p>
-                                                    )}
-                                                    <div className="mt-4 flex items-center justify-between">
-                                                        <VoteButton
-                                                            nomineeId={nominee.id}
-                                                            category={catName}
-                                                            onVoteSuccess={fetchNominees}
-                                                        />
-                                                        <Link
-                                                            href={`/category/${categoryToSlug(catName)}`}
-                                                            className="text-xs text-gray-400 hover:text-white transition-colors"
-                                                        >
-                                                            View nominees →
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                    🗳️ Vote in this category
+                                                </Link>
+                                                <span className="text-xs text-gray-400">
+                                                    {nomineeCount} nominee{nomineeCount !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 )

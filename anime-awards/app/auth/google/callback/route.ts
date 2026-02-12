@@ -20,7 +20,8 @@ export async function GET(request: Request) {
         code,
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `https://animeindian-awards.vercel.app/auth/google/callback`,
+        // 🔒 HARDCODED PRODUCTION URL – MUST MATCH Login.tsx
+        redirect_uri: 'https://animeindian-awards.vercel.app/auth/google/callback',
         grant_type: 'authorization_code',
       }),
     })
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}?error=auth_failed`)
     }
 
-    // 2. Create Supabase server client – LATEST RECOMMENDED PATTERN
+    // 2. Create Supabase server client with correct cookie methods
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,9 +46,7 @@ export async function GET(request: Request) {
             try {
               cookieStore.set({ name, value, ...options })
             } catch (error) {
-              // The `set` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
+              // Ignore – Route Handler can set cookies
             }
           },
           remove(name: string, options: any) {
@@ -66,17 +65,3 @@ export async function GET(request: Request) {
       provider: 'google',
       token: id_token,
     })
-
-    if (supabaseError) {
-      console.error('❌ Supabase sign in error:', supabaseError)
-      return NextResponse.redirect(`${origin}?error=login_failed`)
-    }
-
-    // 4. Success! Redirect to home
-    console.log('✅ Google login successful, session set')
-    return NextResponse.redirect(origin)
-  } catch (err) {
-    console.error('❌ Callback error:', err)
-    return NextResponse.redirect(`${origin}?error=unknown`)
-  }
-                               }

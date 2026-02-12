@@ -7,124 +7,147 @@ import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
 import { ArrowLeft } from 'lucide-react'
 
-const slugToCategory: Record<string, string> = {
-    'anime-of-the-season': 'Anime of the Season',
-    'movie-of-the-season': 'Movie of the Season',
-    'best-hindi-dub': 'Best Hindi Dub',
-    'indian-theatrical-experience': 'Indian Theatrical Experience',
-    'best-shonen': 'Best Shonen',
-    'best-action': 'Best Action',
-    'best-romance': 'Best Romance',
-    'best-isekai': 'Best Isekai',
-    'bachpan-ka-pyaar': 'Bachpan Ka Pyaar',
-}
-
 export default function CategoryPage() {
-    const params = useParams()
-    const router = useRouter()
-    const slug = params.slug as string
-    const category = slugToCategory[slug] || decodeURIComponent(slug)
+  const params = useParams()
+  const router = useRouter()
+  const slug = params.slug as string
 
-    const [nominees, setNominees] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
+  const [category, setCategory] = useState<string>('')
+  const [nominees, setNominees] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
-    useEffect(() => {
-        fetchNominees()
-    }, [category])
+  useEffect(() => {
+    fetchCategoryAndNominees()
+  }, [slug])
 
-    async function fetchNominees() {
-        setLoading(true)
-        const { data, error } = await supabase
-            .from('nominees')
-            .select('*')
-            .eq('category', category)
-            .order('created_at', { ascending: true })
+  async function fetchCategoryAndNominees() {
+    setLoading(true)
 
-        if (!error) setNominees(data || [])
-        setLoading(false)
+    // 1. Find the category by slug
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (categoryError || !categoryData) {
+      // Fallback: decode slug to readable name (e.g., "best-shonen" → "Best Shonen")
+      const fallbackName = slug
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      setCategory(fallbackName)
+      setNotFound(true) // Still show nominees if any exist under this fallback name
+    } else {
+      setCategory(categoryData.name)
     }
 
+    // 2. Fetch nominees for this category
+    const categoryName = categoryData?.name || slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+
+    const { data: nomineesData } = await supabase
+      .from('nominees')
+      .select('*')
+      .eq('category', categoryName)
+      .order('created_at', { ascending: true })
+
+    setNominees(nomineesData || [])
+    setLoading(false)
+  }
+
+  if (loading) {
     return (
-        <main className="min-h-screen bg-slate-950 text-white">
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                    Back
-                </button>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
-                    {category}
-                </h1>
-                <p className="text-gray-400 mb-8">
-                    {nominees.length} nominee{nominees.length !== 1 ? 's' : ''}
-                </p>
-
-                {loading ? (
-                    <p className="text-gray-400">Loading nominees...</p>
-                ) : nominees.length === 0 ? (
-                    <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-8 text-center">
-                        <p className="text-gray-400 mb-4">No nominees in this category yet.</p>
-                        <button
-                            onClick={() => router.push('/')}
-                            className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full transition"
-                        >
-                            Go to Homepage
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {nominees.map((nominee) => (
-                            <div
-                                key={nominee.id}
-                                className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 hover:border-white/30 transition-all"
-                            >
-                                {nominee.image_url && (
-                                    <img
-                                        src={nominee.image_url}
-                                        alt={nominee.title}
-                                        className="w-full h-48 object-cover rounded-xl mb-4"
-                                    />
-                                )}
-                                <h2 className="text-2xl font-bold mb-2">{nominee.title}</h2>
-                                {nominee.anime_name && (
-                                    <p className="text-gray-400 text-sm mb-4">{nominee.anime_name}</p>
-                                )}
-                                <div className="mt-4">
-                                    <VoteButton
-                                        nomineeId={nominee.id}
-                                        category={category}
-                                        onVoteSuccess={fetchNominees}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <section className="max-w-4xl mx-auto px-4 py-12 mt-12">
-                <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl">
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                        <div className="text-center md:text-left md:w-1/2">
-                            <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                                🗳️ Ready to Vote?
-                            </h2>
-                            <p className="text-gray-300">
-                                <span className="font-semibold text-white">One person, one vote.</span> Your vote counts!
-                            </p>
-                        </div>
-                        <div className="md:w-1/2 w-full">
-                            <Login compact={false} showReassurance={false} />
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
+      <main className="min-h-screen bg-slate-950 text-white p-6">
+        <div className="max-w-3xl mx-auto">Loading...</div>
+      </main>
     )
-}
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-white">
+      {/* Header with back button */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
+          {category}
+        </h1>
+        <p className="text-gray-400 mb-8">
+          {nominees.length} nominee{nominees.length !== 1 ? 's' : ''}
+        </p>
+
+        {nominees.length === 0 ? (
+          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-8 text-center">
+            <p className="text-gray-400 mb-4">No nominees in this category yet.</p>
+            <button
+              onClick={() => router.push('/')}
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full transition"
+            >
+              Go to Homepage
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {nominees.map((nominee) => (
+              <div
+                key={nominee.id}
+                className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 hover:border-white/30 transition-all"
+              >
+                {nominee.image_url && (
+                  <img
+                    src={nominee.image_url}
+                    alt={nominee.title}
+                    className="w-full h-48 object-cover rounded-xl mb-4"
+                  />
+                )}
+                <h2 className="text-2xl font-bold mb-2">{nominee.title}</h2>
+                {nominee.anime_name && (
+                  <p className="text-gray-400 text-sm mb-4">{nominee.anime_name}</p>
+                )}
+                <div className="mt-4">
+                  <VoteButton
+                    nomineeId={nominee.id}
+                    category={category}
+                    onVoteSuccess={fetchCategoryAndNominees}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer login section */}
+      <section className="max-w-4xl mx-auto px-4 py-12 mt-12">
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="text-center md:text-left md:w-1/2">
+              <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                🗳️ Ready to Vote?
+              </h2>
+              <p className="text-gray-300">
+                <span className="font-semibold text-white">One person, one vote.</span> Your vote counts!
+              </p>
+            </div>
+            <div className="md:w-1/2 w-full">
+              <Login compact={false} showReassurance={false} />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+      }

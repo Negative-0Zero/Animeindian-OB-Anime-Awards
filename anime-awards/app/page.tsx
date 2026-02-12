@@ -113,7 +113,7 @@ export default function Home() {
             The biggest community event is back. Celebrating the best
             <span className="text-white font-bold"> Hindi Dubs</span>,
             <span className="text-white font-bold"> Theatrical Releases</span>, and
-            <span className="text-white font-bold">{SEASON.animeOf}</span>.
+            <span className="text-white font-bold"> {SEASON.animeOf}</span>.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

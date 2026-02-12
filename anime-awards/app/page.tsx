@@ -7,7 +7,11 @@ import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
 import { 
   Trophy, Calendar, Star, Flame, Heart, Zap, 
-  Clapperboard, Mic, Tv, ArrowRight 
+  Clapperboard, Mic, Tv, ArrowRight,
+  // ✨ NEW ICONS ✨
+  Sword, Crown, Award, Medal, Sparkles, Camera, Film,
+  Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
+  Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond
 } from "lucide-react"
 
 const SEASON = {
@@ -23,7 +27,10 @@ const SEASON = {
 
 // Map icon names to Lucide components
 const iconMap: Record<string, React.ElementType> = {
-  Trophy, Clapperboard, Mic, Flame, Zap, Heart, Tv, Star
+  Trophy, Clapperboard, Mic, Flame, Zap, Heart, Tv, Star,
+  Sword, Crown, Award, Medal, Sparkles, Camera, Film,
+  Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
+  Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond
 }
 
 export default function Home() {

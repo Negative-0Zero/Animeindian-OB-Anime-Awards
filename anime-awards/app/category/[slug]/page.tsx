@@ -7,6 +7,8 @@ import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
 import { ArrowLeft } from 'lucide-react'
 
+export const runtime = 'edge';
+
 export default function CategoryPage() {
   const params = useParams()
   const router = useRouter()

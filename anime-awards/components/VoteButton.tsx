@@ -42,21 +42,19 @@ export default function VoteButton({
         }
     }, [user, pendingVote])
 
-    // ✅ FIXED: Move guard INSIDE the async function
+    // ✅ DEFINITIVE FIX – capture user in a local variable
     useEffect(() => {
         if (!user || isHero) return
-
+        const currentUser = user // TypeScript now knows this is User, not null
         async function checkVote() {
-            // TypeScript now knows user is not null here because we checked above
             const { data } = await supabase
                 .from('votes')
                 .select('id')
-                .eq('user_id', user.id)  // ✅ No more error
+                .eq('user_id', currentUser.id) // ✅ uses the captured variable – no error
                 .eq('category', category)
                 .maybeSingle()
             setVoted(!!data)
         }
-
         checkVote()
     }, [user, category, isHero])
 

@@ -8,27 +8,25 @@ import VoteButton from '@/components/VoteButton'
 import { ArrowLeft } from 'lucide-react'
 
 export default function CategoryClient({ slug }: { slug: string }) {
-  // ✅ CRITICAL: If slug is missing, show error immediately
+  const router = useRouter()
+
+  // ✅ Guard: if slug is missing, show error immediately
   if (!slug) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="text-red-400">Error: No category specified in URL.</p>
+          <p className="text-red-400 mb-4">Error: No category specified in URL.</p>
           <button
             onClick={() => router.back()}
-            className="mt-4 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full transition"
+            className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full transition"
           >
             ← Go Back
           </button>
         </div>
       </main>
-    );
+    )
   }
 
-  // ... rest of your component (useState, useEffect, etc.)
-}
-export default function CategoryClient({ slug }: { slug: string }) {
-  const router = useRouter()
   const [category, setCategory] = useState<string>('')
   const [nominees, setNominees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,7 +41,7 @@ export default function CategoryClient({ slug }: { slug: string }) {
     setError(null)
 
     try {
-      // First, get category name from slug
+      // First, try to get category name from the categories table using the slug
       let categoryName = ''
       const { data: categoryData, error: catError } = await supabase
         .from('categories')
@@ -51,12 +49,14 @@ export default function CategoryClient({ slug }: { slug: string }) {
         .eq('slug', slug)
         .maybeSingle()
 
-      if (catError) throw new Error(`Category error: ${catError.message}`)
+      if (catError) {
+        throw new Error(`Error fetching category: ${catError.message}`)
+      }
 
       if (categoryData) {
         categoryName = categoryData.name
       } else {
-        // Fallback: convert slug to readable name
+        // Fallback: convert slug to a readable name (e.g., "best-shonen" -> "Best Shonen")
         categoryName = slug
           .split('-')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -64,14 +64,16 @@ export default function CategoryClient({ slug }: { slug: string }) {
       }
       setCategory(categoryName)
 
-      // Now fetch nominees for this category
+      // Fetch nominees for this category
       const { data: nomineesData, error: nomError } = await supabase
         .from('nominees')
         .select('*')
         .eq('category', categoryName)
         .order('created_at', { ascending: true })
 
-      if (nomError) throw new Error(`Nominees error: ${nomError.message}`)
+      if (nomError) {
+        throw new Error(`Error fetching nominees: ${nomError.message}`)
+      }
 
       setNominees(nomineesData || [])
     } catch (err: any) {
@@ -189,4 +191,4 @@ export default function CategoryClient({ slug }: { slug: string }) {
       </section>
     </main>
   )
-  }
+}

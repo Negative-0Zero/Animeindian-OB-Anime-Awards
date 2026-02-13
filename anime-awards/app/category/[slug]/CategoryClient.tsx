@@ -15,16 +15,18 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // On mount, if slug prop is missing, extract from URL
+  // Extract slug from prop or URL after mount
   useEffect(() => {
     if (propSlug) {
       setSlug(propSlug)
-    } else {
-      // Extract slug from pathname, e.g., "/category/anime-of-the-season" -> "anime-of-the-season"
-      const pathParts = window.location.pathname.split('/')
-      const lastPart = pathParts[pathParts.length - 1]
-      if (lastPart && lastPart !== 'category') {
-        setSlug(lastPart)
+      return
+    }
+
+    if (typeof window !== 'undefined') {
+      // Try to extract slug from path like /category/xxx
+      const match = window.location.pathname.match(/\/category\/([^\/]+)/)
+      if (match && match[1]) {
+        setSlug(match[1])
       } else {
         setError('No category specified in URL.')
         setLoading(false)
@@ -32,6 +34,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     }
   }, [propSlug])
 
+  // Fetch data once slug is known
   useEffect(() => {
     if (!slug) return
     fetchCategoryAndNominees()
@@ -83,7 +86,9 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   if (!slug && !error) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6">
-        <div className="max-w-3xl mx-auto text-center">Initializing...</div>
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-gray-400">Initializing...</p>
+        </div>
       </main>
     )
   }
@@ -195,4 +200,4 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
       </section>
     </main>
   )
-}
+          }

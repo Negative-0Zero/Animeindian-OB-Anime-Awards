@@ -1,7 +1,0 @@
-name = "animeindian-awards"
-compatibility_date = "2026-02-13"
-pages_build_output_dir = ".vercel/output/static"
-
-[vars]
-NEXT_PUBLIC_SUPABASE_URL = "https://kmhhyfadoadxvycdvqjj.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttaGh5ZmFkb2FkeHZ5Y2R2cWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDg3MDAsImV4cCI6MjA4NjM4NDcwMH0.IKRKL4z00dUt4s59Kv7BsLOY9Ix_xR5waZ_Ky5bthBs"

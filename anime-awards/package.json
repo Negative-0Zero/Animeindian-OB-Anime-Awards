@@ -5,9 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "pages:build": "npx @opennextjs/cloudflare build . --yes"
+    "export": "next export",
+    "pages:build": "npm run build && npm run export"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

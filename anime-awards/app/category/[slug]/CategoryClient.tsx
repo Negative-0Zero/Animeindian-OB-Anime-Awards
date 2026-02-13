@@ -7,38 +7,38 @@ import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
 import { ArrowLeft } from 'lucide-react'
 
-export default function CategoryClient({ slug }: { slug: string }) {
+export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const router = useRouter()
-
-  // ✅ Show debug info if slug is missing
-  if (!slug) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white p-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-red-400 mb-4">Error: No category specified in URL.</p>
-          <p className="text-gray-400 mb-2">Debug: slug = {slug === undefined ? 'undefined' : `"${slug}"`}</p>
-          <p className="text-gray-400 mb-4">Type: {typeof slug}</p>
-          <button
-            onClick={() => router.back()}
-            className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full transition"
-          >
-            ← Go Back
-          </button>
-        </div>
-      </main>
-    )
-  }
-
+  const [slug, setSlug] = useState<string | null>(null)
   const [category, setCategory] = useState<string>('')
   const [nominees, setNominees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // On mount, if slug prop is missing, extract from URL
   useEffect(() => {
+    if (propSlug) {
+      setSlug(propSlug)
+    } else {
+      // Extract slug from pathname, e.g., "/category/anime-of-the-season" -> "anime-of-the-season"
+      const pathParts = window.location.pathname.split('/')
+      const lastPart = pathParts[pathParts.length - 1]
+      if (lastPart && lastPart !== 'category') {
+        setSlug(lastPart)
+      } else {
+        setError('No category specified in URL.')
+        setLoading(false)
+      }
+    }
+  }, [propSlug])
+
+  useEffect(() => {
+    if (!slug) return
     fetchCategoryAndNominees()
   }, [slug])
 
   async function fetchCategoryAndNominees() {
+    if (!slug) return
     setLoading(true)
     setError(null)
 
@@ -55,6 +55,7 @@ export default function CategoryClient({ slug }: { slug: string }) {
       if (categoryData) {
         categoryName = categoryData.name
       } else {
+        // Fallback: convert slug to readable name
         categoryName = slug
           .split('-')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -79,12 +80,10 @@ export default function CategoryClient({ slug }: { slug: string }) {
     }
   }
 
-  if (loading) {
+  if (!slug && !error) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-gray-400">Loading nominees...</p>
-        </div>
+        <div className="max-w-3xl mx-auto text-center">Initializing...</div>
       </main>
     )
   }
@@ -100,6 +99,16 @@ export default function CategoryClient({ slug }: { slug: string }) {
           >
             ← Go Back
           </button>
+        </div>
+      </main>
+    )
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white p-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-gray-400">Loading nominees...</p>
         </div>
       </main>
     )

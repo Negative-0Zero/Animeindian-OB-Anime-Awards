@@ -78,7 +78,6 @@ export default function CategoryClient({ slug }: { slug: string }) {
       setLoading(false)
     }
   }
-}
 
   if (loading) {
     return (

@@ -706,21 +706,11 @@ export default function AdminPage() {
               onClick={async () => {
                 if (!confirm('This will overwrite existing results. Continue?')) return
                   try {
-                    const res = await fetch('/api/calculate-results', { method: 'POST' })
-                      const text = await res.text()
-                        console.log('Response status:', res.status, 'Body:', text)
-                          try {
-                            const data = JSON.parse(text)
-                              if (res.ok && data.success) {
-                                alert('✅ Winners calculated successfully!')
-                              } else {
-                                alert('❌ Error: ' + (data.error || 'Unknown error'))
-                              }
-                          } catch {
-                            alert('❌ Server returned non‑JSON response. Check console.')
-                          }
-                  } catch (err) {
-                    alert('❌ Network error: ' + err)
+                    const { error } = await supabase.rpc('calculate_results')
+                      if (error) throw error
+                        alert('✅ Winners calculated successfully!')
+                  } catch (err: any) {
+                    alert('❌ Error: ' + err.message)
                   }
               }}
               className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition">
@@ -732,4 +722,5 @@ export default function AdminPage() {
     </div>
   )
 }
+
 

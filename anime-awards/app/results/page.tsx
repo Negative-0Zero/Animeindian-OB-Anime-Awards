@@ -188,8 +188,11 @@ export default function ResultsPage() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
             🏆 Winners
           </h1>
-          <div className="flex items-center gap-4">
-            <div className="flex bg-white/5 rounded-full p-1">
+          
+          {/* On mobile, toggle and nav stack vertically; on desktop they sit side by side */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            {/* Combined/Jury toggle */}
+            <div className="flex bg-white/5 rounded-full p-1 self-center">
               <button
                 onClick={() => setViewMode('combined')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${
@@ -211,6 +214,8 @@ export default function ResultsPage() {
                 Jury Only
               </button>
             </div>
+
+            {/* Category navigation (scrollable) */}
             <div className="flex overflow-x-auto gap-2 pb-2 max-w-full">
               {categories.map(cat => (
                 <button
@@ -421,4 +426,4 @@ export default function ResultsPage() {
       )}
     </main>
   )
-        }
+    }

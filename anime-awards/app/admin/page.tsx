@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings'>('nominees')
+  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings' | 'results'>('nominees')
   const router = useRouter()
 
   // ----- Nominees State -----
@@ -377,6 +377,16 @@ export default function AdminPage() {
           >
             ⚙️ Settings
           </button>
+          <button
+            onClick={() => setActiveTab('results')}
+            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'results'
+                ? 'text-white border-b-2 border-orange-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            🏆 Results
+          </button>
         </div>
 
         {/* Nominees Tab */}
@@ -683,7 +693,37 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* Results Tab */}
+        {activeTab === 'results' && (
+          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
+            <h2 className="text-xl font-bold mb-4">🏆 Calculate Winners</h2>
+            <p className="text-gray-400 mb-4">
+              This will compute final scores (60% public + 40% jury) and store top 3 per category in the results table.
+              Any existing results will be overwritten.
+            </p>
+            <button
+              onClick={async () => {
+                if (!confirm('This will overwrite existing results. Continue?')) return
+                try {
+                  const res = await fetch('/api/calculate-results', { method: 'POST' })
+                  const data = await res.json()
+                  if (data.success) {
+                    alert('✅ Winners calculated successfully!')
+                  } else {
+                    alert('❌ Error: ' + data.error)
+                  }
+                } catch (err) {
+                  alert('❌ Network error')
+                }
+              }}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition"
+            >
+              🏆 Calculate Winners
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
-    }
+        }

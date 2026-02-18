@@ -705,25 +705,31 @@ export default function AdminPage() {
             <button
               onClick={async () => {
                 if (!confirm('This will overwrite existing results. Continue?')) return
-                try {
-                  const res = await fetch('/api/calculate-results', { method: 'POST' })
-                  const data = await res.json()
-                  if (data.success) {
-                    alert('✅ Winners calculated successfully!')
-                  } else {
-                    alert('❌ Error: ' + data.error)
+                  try {
+                    const res = await fetch('/api/calculate-results', { method: 'POST' })
+                      const text = await res.text()
+                        console.log('Response status:', res.status, 'Body:', text)
+                          try {
+                            const data = JSON.parse(text)
+                              if (res.ok && data.success) {
+                                alert('✅ Winners calculated successfully!')
+                              } else {
+                                alert('❌ Error: ' + (data.error || 'Unknown error'))
+                              }
+                          } catch {
+                            alert('❌ Server returned non‑JSON response. Check console.')
+                          }
+                  } catch (err) {
+                    alert('❌ Network error: ' + err)
                   }
-                } catch (err) {
-                  alert('❌ Network error')
-                }
               }}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition"
-            >
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition">
               🏆 Calculate Winners
             </button>
           </div>
-        )}
+    )}
       </div>
     </div>
   )
-        }
+}
+

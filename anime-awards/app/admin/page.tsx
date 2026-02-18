@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content'>('nominees')
+  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings'>('nominees')
   const router = useRouter()
 
   // ----- Nominees State -----
@@ -39,6 +39,7 @@ export default function AdminPage() {
   const [rulesContent, setRulesContent] = useState('')
   const [savingContent, setSavingContent] = useState(false)
   const [contentMessage, setContentMessage] = useState('')
+  const [showResults, setShowResults] = useState('false') // for settings toggle
 
   // Available icons
   const iconOptions = [
@@ -65,13 +66,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    // Initial check
     checkUser()
 
-    // Listen for auth changes (login/logout on the same page)
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
-        // Re‑check user and admin status
         checkUser()
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
@@ -89,6 +87,7 @@ export default function AdminPage() {
     fetchNominees()
     fetchCategories()
     fetchRulesContent()
+    fetchSettings()
   }, [user, isAdmin])
 
   async function fetchNominees() {
@@ -120,6 +119,15 @@ export default function AdminPage() {
       .eq('key', 'rules')
       .single()
     if (data) setRulesContent(data.content)
+  }
+
+  async function fetchSettings() {
+    const { data } = await supabase
+      .from('site_content')
+      .select('content')
+      .eq('key', 'show_results')
+      .single()
+    if (data) setShowResults(data.content)
   }
 
   async function saveRulesContent() {
@@ -358,6 +366,16 @@ export default function AdminPage() {
             }`}
           >
             📄 Rules & Content
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'text-white border-b-2 border-orange-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            ⚙️ Settings
           </button>
         </div>
 
@@ -626,7 +644,46 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
+            <h2 className="text-xl font-bold mb-4">Public Visibility</h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Show Results to Public</p>
+                <p className="text-sm text-gray-400">
+                  When enabled, anyone can view the winners at /results.
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  const newValue = showResults === 'true' ? 'false' : 'true'
+                  const { error } = await supabase
+                    .from('site_content')
+                    .update({ content: newValue })
+                    .eq('key', 'show_results')
+                  if (!error) {
+                    setShowResults(newValue)
+                    alert(`Results are now ${newValue === 'true' ? 'visible' : 'hidden'} to the public.`)
+                  } else {
+                    alert('Error updating setting')
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  showResults === 'true' ? 'bg-green-500' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                    showResults === 'true' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
-  }
+    }

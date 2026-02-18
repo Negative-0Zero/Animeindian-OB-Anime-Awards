@@ -4,7 +4,6 @@ import { createServerClient } from '@supabase/ssr'
 
 export async function POST(request: Request) {
   try {
-    // 1. Verify admin using server client
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +32,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 2. Execute the calculation function
     const { error } = await supabase.rpc('calculate_results')
     if (error) throw error
 
@@ -42,4 +40,4 @@ export async function POST(request: Request) {
     console.error('Calculation error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
-      }
+}

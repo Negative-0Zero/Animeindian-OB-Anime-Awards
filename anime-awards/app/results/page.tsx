@@ -21,7 +21,6 @@ export default function ResultsPage() {
 
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({})
 
-  // 1. Check visibility setting
   useEffect(() => {
     const checkVisibility = async () => {
       const { data } = await supabase
@@ -34,12 +33,11 @@ export default function ResultsPage() {
     checkVisibility()
   }, [])
 
-  // 2. Fetch data only if visible
   useEffect(() => {
     if (showResults) {
       fetchData()
     } else if (showResults === false) {
-      setLoading(false) // stop loading, show "not available"
+      setLoading(false)
     }
   }, [showResults])
 
@@ -48,21 +46,24 @@ export default function ResultsPage() {
     setError(null)
 
     try {
+      // 1. Fetch all nominees
       const { data: nomineesData, error: nomError } = await supabase
         .from('nominees')
         .select('*')
         .order('created_at')
 
-      if (nomError) throw new Error(nomError.message)
+      if (nomError) throw new Error(`Nominees error: ${nomError.message}`)
 
+      // 2. Fetch results
       const { data: resultsData, error: resError } = await supabase
         .from('results')
         .select('*, nominees(title, anime_name, image_url)')
         .order('category')
         .order('rank')
 
-      if (resError) throw new Error(resError.message)
+      if (resError) throw new Error(`Results error: ${resError.message}`)
 
+      // 3. Group nominees by category
       const nomineesMap: Record<string, any[]> = {}
       const catSet = new Set<string>()
       nomineesData?.forEach(n => {
@@ -71,6 +72,7 @@ export default function ResultsPage() {
         catSet.add(n.category)
       })
 
+      // 4. Group results by category
       const resultsMap: Record<string, any[]> = {}
       resultsData?.forEach(r => {
         if (!resultsMap[r.category]) resultsMap[r.category] = []
@@ -82,56 +84,15 @@ export default function ResultsPage() {
       setNomineesByCategory(nomineesMap)
       setResultsByCategory(resultsMap)
     } catch (err: any) {
-      setError(err.message)
+      console.error('Fetch error:', err)
+      setError(err.message || 'Unknown error')
     } finally {
       setLoading(false)
     }
   }
 
-  const scrollToCategory = (category: string) => {
-    categoryRefs.current[category]?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // ... rest of the functions (scrollToCategory, handleReveal, etc.) remain the same ...
 
-  const handleReveal = (category: string) => {
-    setRevealed(prev => ({ ...prev, [category]: true }))
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
-  }
-
-  const toggleExpand = (category: string) => {
-    setExpanded(prev => ({ ...prev, [category]: !prev[category] }))
-  }
-
-  const getCategoryData = (category: string) => {
-    const nominees = nomineesByCategory[category] || []
-    const results = resultsByCategory[category] || []
-    if (results.length === 0) return { winner: null, sortedNominees: nominees }
-
-    if (viewMode === 'combined') {
-      const winner = results[0]
-      return { winner, sortedNominees: nominees }
-    } else {
-      const sorted = [...nominees].sort((a, b) => {
-        const juryA = results.find(r => r.nominee_id === a.id)?.jury_votes || 0
-        const juryB = results.find(r => r.nominee_id === b.id)?.jury_votes || 0
-        return juryB - juryA
-      })
-      const winner = sorted[0] ? { ...sorted[0], ...results.find(r => r.nominee_id === sorted[0].id) } : null
-      return { winner, sortedNominees: sorted }
-    }
-  }
-
-  const handleNomineeClick = (nominee: any, category: string) => {
-    if (!revealed[category]) {
-      alert('Results not revealed yet! Click "REVEAL WINNER" first.')
-      return
-    }
-    const result = resultsByCategory[category]?.find(r => r.nominee_id === nominee.id)
-    setSelectedNominee({ ...nominee, result })
-  }
-
-  const closeModal = () => setSelectedNominee(null)
-
-  // Loading states
   if (showResults === null || (showResults && loading)) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-8">
@@ -156,10 +117,13 @@ export default function ResultsPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-2xl font-bold text-red-400 mb-4">Error loading results</h1>
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-4xl font-bold mb-4 text-red-400">Error Loading Results</h1>
           <p className="text-gray-400">{error}</p>
-          <button onClick={fetchData} className="mt-4 px-4 py-2 bg-white/10 rounded-lg">
+          <button
+            onClick={fetchData}
+            className="mt-4 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full"
+          >
             Retry
           </button>
         </div>
@@ -188,10 +152,7 @@ export default function ResultsPage() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
             🏆 Winners
           </h1>
-          
-          {/* On mobile, toggle and nav stack vertically; on desktop they sit side by side */}
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-            {/* Combined/Jury toggle */}
             <div className="flex bg-white/5 rounded-full p-1 self-center">
               <button
                 onClick={() => setViewMode('combined')}
@@ -214,8 +175,6 @@ export default function ResultsPage() {
                 Jury Only
               </button>
             </div>
-
-            {/* Category navigation (scrollable) */}
             <div className="flex overflow-x-auto gap-2 pb-2 max-w-full">
               {categories.map(cat => (
                 <button
@@ -426,4 +385,4 @@ export default function ResultsPage() {
       )}
     </main>
   )
-    }
+                        }

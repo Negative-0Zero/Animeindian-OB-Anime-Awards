@@ -5,7 +5,10 @@ import confetti from 'canvas-confetti'
 import { supabase } from '@/utils/supabase/client'
 import { Trophy, X } from 'lucide-react'
 
+type ViewMode = 'combined' | 'jury'
+
 export default function ResultsPage() {
+  const [showResults, setShowResults] = useState<boolean | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const [nomineesByCategory, setNomineesByCategory] = useState<Record<string, any[]>>({})
   const [resultsByCategory, setResultsByCategory] = useState<Record<string, any[]>>({})
@@ -14,12 +17,31 @@ export default function ResultsPage() {
   const [selectedNominee, setSelectedNominee] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('combined')
 
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({})
 
+  // 1. Check visibility setting
   useEffect(() => {
-    fetchData()
+    const checkVisibility = async () => {
+      const { data } = await supabase
+        .from('site_content')
+        .select('content')
+        .eq('key', 'show_results')
+        .single()
+      setShowResults(data?.content === 'true')
+    }
+    checkVisibility()
   }, [])
+
+  // 2. Fetch data only if visible
+  useEffect(() => {
+    if (showResults) {
+      fetchData()
+    } else if (showResults === false) {
+      setLoading(false) // stop loading, show "not available"
+    }
+  }, [showResults])
 
   async function fetchData() {
     setLoading(true)
@@ -79,6 +101,25 @@ export default function ResultsPage() {
     setExpanded(prev => ({ ...prev, [category]: !prev[category] }))
   }
 
+  const getCategoryData = (category: string) => {
+    const nominees = nomineesByCategory[category] || []
+    const results = resultsByCategory[category] || []
+    if (results.length === 0) return { winner: null, sortedNominees: nominees }
+
+    if (viewMode === 'combined') {
+      const winner = results[0]
+      return { winner, sortedNominees: nominees }
+    } else {
+      const sorted = [...nominees].sort((a, b) => {
+        const juryA = results.find(r => r.nominee_id === a.id)?.jury_votes || 0
+        const juryB = results.find(r => r.nominee_id === b.id)?.jury_votes || 0
+        return juryB - juryA
+      })
+      const winner = sorted[0] ? { ...sorted[0], ...results.find(r => r.nominee_id === sorted[0].id) } : null
+      return { winner, sortedNominees: sorted }
+    }
+  }
+
   const handleNomineeClick = (nominee: any, category: string) => {
     if (!revealed[category]) {
       alert('Results not revealed yet! Click "REVEAL WINNER" first.')
@@ -90,10 +131,24 @@ export default function ResultsPage() {
 
   const closeModal = () => setSelectedNominee(null)
 
-  if (loading) {
+  // Loading states
+  if (showResults === null || (showResults && loading)) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-8">
-        <div className="max-w-6xl mx-auto text-center">Loading results...</div>
+        <div className="max-w-6xl mx-auto text-center">Loading...</div>
+      </main>
+    )
+  }
+
+  if (showResults === false) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white p-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
+            Results Not Yet Available
+          </h1>
+          <p className="text-gray-400">Winners will be announced after the voting deadline.</p>
+        </div>
       </main>
     )
   }
@@ -117,9 +172,9 @@ export default function ResultsPage() {
       <main className="min-h-screen bg-slate-950 text-white p-8">
         <div className="max-w-2xl mx-auto text-center">
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
-            Results Not Ready
+            No Results Yet
           </h1>
-          <p className="text-gray-400">Winners will be announced after the voting deadline.</p>
+          <p className="text-gray-400">No winners have been calculated.</p>
         </div>
       </main>
     )
@@ -127,31 +182,55 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      {/* Sticky header with category navigation */}
+      {/* Sticky header with category navigation and view toggle */}
       <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-sm border-b border-white/10 p-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
             🏆 Winners
           </h1>
-          <div className="flex overflow-x-auto gap-2 pb-2 max-w-full">
-            {categories.map(cat => (
+          <div className="flex items-center gap-4">
+            <div className="flex bg-white/5 rounded-full p-1">
               <button
-                key={cat}
-                onClick={() => scrollToCategory(cat)}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-sm whitespace-nowrap transition"
+                onClick={() => setViewMode('combined')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  viewMode === 'combined'
+                    ? 'bg-yellow-500 text-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                {cat}
+                Combined
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('jury')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  viewMode === 'jury'
+                    ? 'bg-yellow-500 text-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Jury Only
+              </button>
+            </div>
+            <div className="flex overflow-x-auto gap-2 pb-2 max-w-full">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => scrollToCategory(cat)}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-sm whitespace-nowrap transition"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-6 space-y-16">
         {categories.map(category => {
+          const { winner, sortedNominees } = getCategoryData(category)
           const nominees = nomineesByCategory[category] || []
           const results = resultsByCategory[category] || []
-          const winner = results[0]
           const isRevealed = revealed[category]
           const isExpanded = expanded[category] || false
 
@@ -202,38 +281,39 @@ export default function ResultsPage() {
                       <div className="bg-gradient-to-br from-yellow-900 via-purple-900 to-pink-900 rounded-3xl p-8 md:p-12 text-center border-4 border-yellow-400 shadow-2xl relative overflow-hidden">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-300/20 via-transparent to-transparent" />
                         <p className="text-sm uppercase tracking-widest text-yellow-300 mb-2">
-                          GRAND WINNER
+                          {viewMode === 'combined' ? 'GRAND WINNER' : 'JURY WINNER'}
                         </p>
                         <h2 className="text-5xl md:text-7xl font-black mb-4 bg-gradient-to-r from-yellow-200 to-white bg-clip-text text-transparent">
-                          {winner.nominees?.title}
+                          {winner.nominees?.title || winner.title}
                         </h2>
                         {winner.nominees?.anime_name && (
                           <p className="text-xl text-white/80 mb-6">{winner.nominees.anime_name}</p>
                         )}
-                        {winner.nominees?.image_url && (
+                        {(winner.image_url || winner.nominees?.image_url) && (
                           <img
-                            src={winner.nominees.image_url}
-                            alt={winner.nominees.title}
+                            src={winner.image_url || winner.nominees?.image_url}
+                            alt={winner.nominees?.title || winner.title}
                             className="w-40 h-40 object-cover rounded-full mx-auto mb-6 border-4 border-yellow-400 shadow-xl"
                           />
                         )}
                         <div className="flex justify-center gap-8 text-white/90 text-sm mb-8">
                           <div>
-                            <span className="block text-2xl font-bold">{winner.public_votes}</span>
+                            <span className="block text-2xl font-bold">{winner.public_votes || 0}</span>
                             <span>Public Votes</span>
                           </div>
                           <div>
-                            <span className="block text-2xl font-bold">{winner.jury_votes}</span>
+                            <span className="block text-2xl font-bold">{winner.jury_votes || 0}</span>
                             <span>Jury Votes</span>
                           </div>
-                          <div>
-                            <span className="block text-2xl font-bold">{winner.final_score?.toFixed(1)}</span>
-                            <span>Final Score</span>
-                          </div>
+                          {viewMode === 'combined' && (
+                            <div>
+                              <span className="block text-2xl font-bold">{winner.final_score?.toFixed(1) || 0}</span>
+                              <span>Final Score</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Toggle button outside the card */}
                       <div className="text-center mt-4">
                         <button
                           onClick={() => toggleExpand(category)}
@@ -245,10 +325,13 @@ export default function ResultsPage() {
 
                       {isExpanded && (
                         <div className="mt-6">
-                          <h3 className="text-xl font-semibold mb-4 text-gray-300">All Nominees</h3>
+                          <h3 className="text-xl font-semibold mb-4 text-gray-300">
+                            {viewMode === 'combined' ? 'All Nominees (Combined Ranking)' : 'All Nominees (Jury Ranking)'}
+                          </h3>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {nominees.map(nominee => {
+                            {sortedNominees.map(nominee => {
                               const result = results.find(r => r.nominee_id === nominee.id)
+                              const rank = sortedNominees.indexOf(nominee) + 1
                               return (
                                 <div
                                   key={nominee.id}
@@ -267,7 +350,7 @@ export default function ResultsPage() {
                                   <h4 className="font-bold text-sm md:text-base">{nominee.title}</h4>
                                   {result && (
                                     <span className="inline-block mt-2 text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full">
-                                      Rank #{result.rank}
+                                      Rank #{rank}
                                     </span>
                                   )}
                                 </div>
@@ -338,4 +421,4 @@ export default function ResultsPage() {
       )}
     </main>
   )
-}
+        }

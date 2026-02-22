@@ -547,7 +547,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
+                <h2 className="text-xl font-bold">📋 Current Nominees</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}
@@ -873,3 +873,4 @@ export default function AdminPage() {
     </div>
   )
     }
+

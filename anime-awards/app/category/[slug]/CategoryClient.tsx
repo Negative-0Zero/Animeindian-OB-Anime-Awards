@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const router = useRouter()
@@ -14,6 +15,8 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const [nominees, setNominees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [nextCategory, setNextCategory] = useState<{ slug: string; name: string } | null>(null)
+  const [prevCategory, setPrevCategory] = useState<{ slug: string; name: string } | null>(null)
 
   // Extract slug from prop or URL after mount
   useEffect(() => {
@@ -23,7 +26,6 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     }
 
     if (typeof window !== 'undefined') {
-      // Try to extract slug from path like /category/xxx
       const match = window.location.pathname.match(/\/category\/([^\/]+)/)
       if (match && match[1]) {
         setSlug(match[1])
@@ -37,35 +39,50 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   // Fetch data once slug is known
   useEffect(() => {
     if (!slug) return
-    fetchCategoryAndNominees()
+    fetchCategoryAndNeighbors()
   }, [slug])
 
-  async function fetchCategoryAndNominees() {
+  async function fetchCategoryAndNeighbors() {
     if (!slug) return
     setLoading(true)
     setError(null)
 
     try {
-      let categoryName = ''
-      const { data: categoryData, error: catError } = await supabase
+      // Get current category details
+      const { data: currentCat, error: catError } = await supabase
         .from('categories')
-        .select('name')
+        .select('name, display_order')
         .eq('slug', slug)
         .maybeSingle()
 
       if (catError) throw new Error(`Category error: ${catError.message}`)
+      if (!currentCat) throw new Error('Category not found')
 
-      if (categoryData) {
-        categoryName = categoryData.name
-      } else {
-        // Fallback: convert slug to readable name
-        categoryName = slug
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
-      }
+      const categoryName = currentCat.name
       setCategory(categoryName)
 
+      // Fetch all categories sorted by display_order to find neighbors
+      const { data: allCats, error: allCatsError } = await supabase
+        .from('categories')
+        .select('slug, name, display_order')
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true })
+
+      if (allCatsError) throw allCatsError
+
+      const currentIndex = allCats.findIndex(c => c.slug === slug)
+      if (currentIndex > 0) {
+        setPrevCategory(allCats[currentIndex - 1])
+      } else {
+        setPrevCategory(null)
+      }
+      if (currentIndex < allCats.length - 1) {
+        setNextCategory(allCats[currentIndex + 1])
+      } else {
+        setNextCategory(null)
+      }
+
+      // Fetch nominees for this category
       const { data: nomineesData, error: nomError } = await supabase
         .from('nominees')
         .select('*')
@@ -171,7 +188,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
                   <VoteButton
                     nomineeId={nominee.id}
                     category={category}
-                    onVoteSuccess={fetchCategoryAndNominees}
+                    onVoteSuccess={fetchCategoryAndNeighbors}
                     className="w-full"
                   />
                 </div>
@@ -179,6 +196,30 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
             ))}
           </div>
         )}
+
+        {/* Category Navigation */}
+        <div className="flex justify-between mt-12 pt-6 border-t border-white/10">
+          {prevCategory ? (
+            <Link
+              href={`/category/${prevCategory.slug}`}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={20} />
+              <span>Previous: {prevCategory.name}</span>
+            </Link>
+          ) : (
+            <div></div>
+          )}
+          {nextCategory && (
+            <Link
+              href={`/category/${nextCategory.slug}`}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <span>Next: {nextCategory.name}</span>
+              <ArrowRight size={20} />
+            </Link>
+          )}
+        </div>
       </div>
 
       <section className="max-w-4xl mx-auto px-4 py-12 mt-12">
@@ -200,4 +241,4 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
       </section>
     </main>
   )
-          }
+      }

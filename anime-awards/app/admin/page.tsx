@@ -34,13 +34,13 @@ export default function AdminPage() {
     description: ''
   })
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
-  const [reordering, setReordering] = useState(false) // NEW: disable buttons while reordering
+  const [reordering, setReordering] = useState(false)
 
   // ----- Site Content State -----
   const [rulesContent, setRulesContent] = useState('')
   const [savingContent, setSavingContent] = useState(false)
   const [contentMessage, setContentMessage] = useState('')
-  const [showResults, setShowResults] = useState('false') // for settings toggle
+  const [showResults, setShowResults] = useState('false')
 
   // Available icons
   const iconOptions = [
@@ -103,8 +103,8 @@ export default function AdminPage() {
     const { data } = await supabase
       .from('categories')
       .select('*')
-      .order('display_order', { ascending: true })  // <-- ORDER BY display_order
-      .order('name', { ascending: true })           // tie-breaker
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true })
     setCategoryList(data || [])
     if (data) {
       setCategories(data.map(c => c.name))
@@ -225,7 +225,6 @@ export default function AdminPage() {
     e.preventDefault()
     if (!categoryForm.name || !categoryForm.slug) return alert('Name and slug are required')
     const slug = categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
-    // NEW: When adding, give it the highest display_order (end of list)
     const maxOrder = categoryList.length > 0 ? Math.max(...categoryList.map(c => c.display_order || 0)) + 1 : 1
     const { error } = await supabase.from('categories').insert([{ ...categoryForm, slug, display_order: maxOrder }])
     if (error) {
@@ -285,13 +284,13 @@ export default function AdminPage() {
     })
   }
 
-  // NEW: Move category up/down
+  // ✅ FIXED: Use two separate updates instead of upsert
   async function moveCategory(categoryId: string, direction: 'up' | 'down') {
     const currentIndex = categoryList.findIndex(c => c.id === categoryId)
     if (
       (direction === 'up' && currentIndex === 0) ||
       (direction === 'down' && currentIndex === categoryList.length - 1)
-    ) return // Can't move beyond bounds
+    ) return
 
     const swapWithIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
     const currentCat = categoryList[currentIndex]
@@ -299,18 +298,20 @@ export default function AdminPage() {
 
     setReordering(true)
 
-    // Swap display_order values
-    const { error } = await supabase
+    const { error: error1 } = await supabase
       .from('categories')
-      .upsert([
-        { id: currentCat.id, display_order: swapCat.display_order },
-        { id: swapCat.id, display_order: currentCat.display_order }
-      ])
+      .update({ display_order: swapCat.display_order })
+      .eq('id', currentCat.id)
 
-    if (!error) {
-      await fetchCategories() // refresh list
+    const { error: error2 } = await supabase
+      .from('categories')
+      .update({ display_order: currentCat.display_order })
+      .eq('id', swapCat.id)
+
+    if (error1 || error2) {
+      alert('Error reordering: ' + (error1?.message || error2?.message))
     } else {
-      alert('Error reordering: ' + error.message)
+      await fetchCategories()
     }
     setReordering(false)
   }
@@ -643,7 +644,6 @@ export default function AdminPage() {
                         {cat.description && <p className="text-xs text-gray-500 mt-1">{cat.description}</p>}
                       </div>
                       <div className="flex gap-2 items-center">
-                        {/* NEW: Up/Down buttons */}
                         <button
                           onClick={() => moveCategory(cat.id, 'up')}
                           disabled={reordering}
@@ -778,4 +778,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-          }
+    }

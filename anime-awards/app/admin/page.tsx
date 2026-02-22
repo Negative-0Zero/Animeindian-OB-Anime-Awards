@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings' | 'results'>('nominees')
+  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings' | 'results' | 'dashboard'>('nominees')
   const router = useRouter()
 
   // ----- Nominees State -----
@@ -36,8 +36,18 @@ export default function AdminPage() {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [reordering, setReordering] = useState(false)
 
-  // ----- Collapsible Categories State -----
+  // ----- Dashboard State -----
+  const [dashboardData, setDashboardData] = useState<{
+    totalVotes: number
+    totalNominees: number
+    totalCategories: number
+    categoryStats: { category: string; totalVotes: number; nominees: any[] }[]
+  } | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(false)
+
+  // ----- Collapsible Categories State (for Nominees tab) -----
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
 
   // ----- Site Content State -----
   const [rulesContent, setRulesContent] = useState('')
@@ -92,7 +102,8 @@ export default function AdminPage() {
     fetchCategories()
     fetchRulesContent()
     fetchSettings()
-  }, [user, isAdmin])
+    if (activeTab === 'dashboard') fetchDashboardData()
+  }, [user, isAdmin, activeTab])
 
   // Initialize expanded categories whenever categoryList changes
   useEffect(() => {
@@ -156,6 +167,54 @@ export default function AdminPage() {
       setContentMessage('✅ Rules page updated!')
     }
     setSavingContent(false)
+  }
+
+  // ─── DASHBOARD DATA ─────────────────────────────────────────
+  async function fetchDashboardData() {
+    setDashboardLoading(true)
+    try {
+      const { data: nomineesData, error: nomError } = await supabase
+        .from('nominees')
+        .select('category, title, votes_public')
+
+      if (nomError) throw nomError
+
+      const { count: totalCategories, error: catCountError } = await supabase
+        .from('categories')
+        .select('*', { count: 'exact', head: true })
+
+      if (catCountError) throw catCountError
+
+      const totalVotes = nomineesData?.reduce((sum, n) => sum + (n.votes_public || 0), 0) || 0
+      const totalNominees = nomineesData?.length || 0
+
+      const grouped = (nomineesData || []).reduce((acc, n) => {
+        if (!acc[n.category]) acc[n.category] = { totalVotes: 0, nominees: [] }
+        acc[n.category].totalVotes += n.votes_public || 0
+        acc[n.category].nominees.push(n)
+        return acc
+      }, {} as Record<string, { totalVotes: number; nominees: any[] }>)
+
+      const categoryStats = Object.entries(grouped)
+        .map(([category, data]) => ({
+          category,
+          totalVotes: data.totalVotes,
+          nominees: data.nominees.sort((a, b) => (b.votes_public || 0) - (a.votes_public || 0))
+        }))
+        .sort((a, b) => b.totalVotes - a.totalVotes)
+
+      setDashboardData({
+        totalVotes,
+        totalNominees,
+        totalCategories: totalCategories || 0,
+        categoryStats
+      })
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err)
+      alert('Failed to load dashboard data.')
+    } finally {
+      setDashboardLoading(false)
+    }
   }
 
   // ─── NOMINEE HANDLERS ──────────────────────────────────────
@@ -422,6 +481,16 @@ export default function AdminPage() {
         {/* Tab Navigation */}
         <div className="flex gap-4 mb-8 border-b border-white/10 overflow-x-auto pb-2">
           <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'dashboard'
+                ? 'text-white border-b-2 border-orange-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📊 Dashboard
+          </button>
+          <button
             onClick={() => setActiveTab('nominees')}
             className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === 'nominees'
@@ -473,7 +542,151 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Nominees Tab */}
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">📊 Voting Dashboard</h2>
+              <button
+                onClick={fetchDashboardData}
+                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {dashboardLoading && <p className="text-gray-400">Loading dashboard data...</p>}
+
+            {dashboardData && (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5">
+                    <p className="text-sm text-gray-400">Total Votes Cast</p>
+                    <p className="text-3xl font-bold">{dashboardData.totalVotes.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5">
+                    <p className="text-sm text-gray-400">Total Nominees</p>
+                    <p className="text-3xl font-bold">{dashboardData.totalNominees}</p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5">
+                    <p className="text-sm text-gray-400">Total Categories</p>
+                    <p className="text-3xl font-bold">{dashboardData.totalCategories}</p>
+                  </div>
+                </div>
+
+                {/* Settings Toggle (moved from Settings tab) */}
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Show Results to Public</p>
+                      <p className="text-sm text-gray-400">
+                        When enabled, anyone can view the winners at /results.
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const newValue = showResults === 'true' ? 'false' : 'true'
+                        const { error } = await supabase
+                          .from('site_content')
+                          .update({ content: newValue })
+                          .eq('key', 'show_results')
+                        if (!error) {
+                          setShowResults(newValue)
+                          alert(`Results are now ${newValue === 'true' ? 'visible' : 'hidden'} to the public.`)
+                        } else {
+                          alert('Error updating setting')
+                        }
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                        showResults === 'true' ? 'bg-green-500' : 'bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                          showResults === 'true' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Results Calculation (moved from Results tab) */}
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
+                  <h3 className="font-bold mb-2">🏆 Calculate Winners</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    This will compute final scores (60% public + 40% jury) and store top 3 per category in the results table.
+                    Any existing results will be overwritten.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('This will overwrite existing results. Continue?')) return
+                      try {
+                        const { error } = await supabase.rpc('calculate_results')
+                        if (error) throw error
+                        alert('✅ Winners calculated successfully!')
+                      } catch (err: any) {
+                        alert('❌ Error: ' + err.message)
+                      }
+                    }}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition"
+                  >
+                    🏆 Calculate Winners
+                  </button>
+                </div>
+
+                {/* Preview Winners */}
+                <h3 className="text-lg font-bold mb-3">🏆 Current Top 3 by Category (Preview)</h3>
+                <div className="space-y-4">
+                  {dashboardData.categoryStats.map(stat => (
+                    <div key={stat.category} className="border border-white/10 rounded-lg overflow-hidden">
+                      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center">
+                        <h4 className="font-bold">{stat.category}</h4>
+                        <span className="text-sm text-gray-400">{stat.totalVotes} votes</span>
+                      </div>
+                      <div className="p-4">
+                        {/* Preview Top 3 */}
+                        <div className="mb-3 bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+                          <p className="text-sm text-green-400 font-semibold mb-2">🏆 Current Top 3 (Preview)</p>
+                          <div className="space-y-1">
+                            {stat.nominees.slice(0, 3).map((n, idx) => (
+                              <div key={n.id} className="flex justify-between text-sm">
+                                <span>
+                                  {idx === 0 && '🥇 '}
+                                  {idx === 1 && '🥈 '}
+                                  {idx === 2 && '🥉 '}
+                                  {n.title}
+                                </span>
+                                <span className="text-gray-400">{n.votes_public || 0} votes</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* All nominees in category */}
+                        <details className="group">
+                          <summary className="text-sm text-gray-400 cursor-pointer hover:text-white">
+                            Show all {stat.nominees.length} nominees
+                          </summary>
+                          <div className="mt-2 space-y-1 pl-2">
+                            {stat.nominees.map((n, i) => (
+                              <div key={n.id} className="flex justify-between text-xs text-gray-500">
+                                <span>{i+1}. {n.title}</span>
+                                <span>{n.votes_public || 0}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Nominees Tab (cleaned) */}
         {activeTab === 'nominees' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
@@ -547,7 +760,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees</h2>
+                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}
@@ -564,13 +777,28 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Search Bar */}
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="🔍 Search nominees by title or anime name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500"
+                />
+              </div>
+
               {nominees.length === 0 ? (
                 <p className="text-gray-400">No nominees yet. Add one above!</p>
               ) : (
                 <div className="space-y-6">
                   {sortedCategories.map(cat => {
-                    const catNominees = groupedNominees[cat.name] || []
-                    if (catNominees.length === 0) return null // skip empty categories
+                    const catNominees = (groupedNominees[cat.name] || []).filter(n => 
+                      n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (n.anime_name && n.anime_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    )
+                    if (catNominees.length === 0) return null
+
                     const isExpanded = expandedCategories.has(cat.id)
 
                     return (
@@ -584,7 +812,6 @@ export default function AdminPage() {
                               {isExpanded ? '▼' : '▶'}
                             </span>
                             <h3 className="font-bold text-lg">{cat.name}</h3>
-                            <span className="text-sm text-gray-400">({catNominees.length})</span>
                           </div>
                           <span className="text-xs text-gray-500">Click to {isExpanded ? 'collapse' : 'expand'}</span>
                         </div>
@@ -624,7 +851,7 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Categories Tab */}
+        {/* Categories Tab (unchanged) */}
         {activeTab === 'categories' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
@@ -775,7 +1002,7 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Content Tab */}
+        {/* Content Tab (unchanged) */}
         {activeTab === 'content' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
             <h2 className="text-xl font-bold mb-4">📄 Rules Page Content</h2>
@@ -806,7 +1033,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Settings Tab */}
+        {/* Settings Tab (now only contains the toggle, but we moved it to Dashboard; you can remove this tab if desired) */}
         {activeTab === 'settings' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
             <h2 className="text-xl font-bold mb-4">Public Visibility</h2>
@@ -845,7 +1072,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Results Tab */}
+        {/* Results Tab (now only contains the calculation button, but we moved it to Dashboard) */}
         {activeTab === 'results' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
             <h2 className="text-xl font-bold mb-4">🏆 Calculate Winners</h2>
@@ -872,5 +1099,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-    }
-
+        }

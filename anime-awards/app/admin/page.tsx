@@ -36,6 +36,9 @@ export default function AdminPage() {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [reordering, setReordering] = useState(false)
 
+  // ----- Collapsible Categories State -----
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+
   // ----- Site Content State -----
   const [rulesContent, setRulesContent] = useState('')
   const [savingContent, setSavingContent] = useState(false)
@@ -90,6 +93,13 @@ export default function AdminPage() {
     fetchRulesContent()
     fetchSettings()
   }, [user, isAdmin])
+
+  // Initialize expanded categories whenever categoryList changes
+  useEffect(() => {
+    if (categoryList.length > 0) {
+      setExpandedCategories(new Set(categoryList.map(c => c.id)))
+    }
+  }, [categoryList])
 
   async function fetchNominees() {
     const { data } = await supabase
@@ -325,6 +335,36 @@ export default function AdminPage() {
     return grouped
   }, [nominees])
 
+  // ─── SORT CATEGORIES WITH SELECTED AT TOP ──────────────────
+  const sortedCategories = useMemo(() => {
+    if (!nomineeForm.category || categoryList.length === 0) return categoryList
+    const selectedCat = categoryList.find(c => c.name === nomineeForm.category)
+    if (!selectedCat) return categoryList
+    const others = categoryList.filter(c => c.name !== nomineeForm.category)
+    return [selectedCat, ...others]
+  }, [categoryList, nomineeForm.category])
+
+  // ─── TOGGLE CATEGORY EXPAND ─────────────────────────────────
+  const toggleCategory = (id: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+
+  const expandAll = () => {
+    setExpandedCategories(new Set(categoryList.map(c => c.id)))
+  }
+
+  const collapseAll = () => {
+    setExpandedCategories(new Set())
+  }
+
   // ─── RENDER ────────────────────────────────────────────────
   if (loading) {
     return <div className="min-h-screen bg-slate-950 text-white p-8">Loading...</div>
@@ -506,46 +546,75 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-              <h2 className="text-xl font-bold mb-4">📋 Current Nominees (grouped by category)</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={expandAll}
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    onClick={collapseAll}
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              </div>
+
               {nominees.length === 0 ? (
                 <p className="text-gray-400">No nominees yet. Add one above!</p>
               ) : (
                 <div className="space-y-6">
-                  {categoryList.map(cat => {
+                  {sortedCategories.map(cat => {
                     const catNominees = groupedNominees[cat.name] || []
                     if (catNominees.length === 0) return null // skip empty categories
+                    const isExpanded = expandedCategories.has(cat.id)
 
                     return (
                       <div key={cat.id} className="border border-white/10 rounded-lg overflow-hidden">
-                        <div className="bg-slate-800 px-4 py-2 flex justify-between items-center">
-                          <h3 className="font-bold text-lg">{cat.name}</h3>
-                          <span className="text-sm text-gray-400">{catNominees.length} nominee(s)</span>
+                        <div
+                          className="bg-slate-800 px-4 py-2 flex justify-between items-center cursor-pointer hover:bg-slate-700 transition-colors"
+                          onClick={() => toggleCategory(cat.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400 text-lg">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                            <h3 className="font-bold text-lg">{cat.name}</h3>
+                            <span className="text-sm text-gray-400">({catNominees.length})</span>
+                          </div>
+                          <span className="text-xs text-gray-500">Click to {isExpanded ? 'collapse' : 'expand'}</span>
                         </div>
-                        <div className="divide-y divide-white/5">
-                          {catNominees.map((n) => (
-                            <div key={n.id} className="flex items-center justify-between bg-slate-900/50 p-4 hover:bg-slate-800/50 transition-colors">
-                              <div className="flex-1">
-                                <p className="font-medium">{n.title}</p>
-                                {n.anime_name && <p className="text-sm text-gray-400">{n.anime_name}</p>}
-                                <p className="text-xs text-gray-500 mt-1">Votes: {n.votes_public}</p>
+                        {isExpanded && (
+                          <div className="divide-y divide-white/5">
+                            {catNominees.map((n) => (
+                              <div key={n.id} className="flex items-center justify-between bg-slate-900/50 p-4 hover:bg-slate-800/50 transition-colors">
+                                <div className="flex-1">
+                                  <p className="font-medium">{n.title}</p>
+                                  {n.anime_name && <p className="text-sm text-gray-400">{n.anime_name}</p>}
+                                  <p className="text-xs text-gray-500 mt-1">Votes: {n.votes_public}</p>
+                                </div>
+                                <div className="flex gap-2 ml-4">
+                                  <button
+                                    onClick={() => editNominee(n)}
+                                    className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteNominee(n.id)}
+                                    className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex gap-2 ml-4">
-                                <button
-                                  onClick={() => editNominee(n)}
-                                  className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => deleteNominee(n.id)}
-                                  className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -803,4 +872,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-      }
+    }

@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'settings' | 'results' | 'dashboard'>('nominees')
+  const [activeTab, setActiveTab] = useState<'nominees' | 'categories' | 'content' | 'dashboard'>('nominees')
   const router = useRouter()
 
   // ----- Nominees State -----
@@ -22,6 +22,12 @@ export default function AdminPage() {
   })
   const [categories, setCategories] = useState<any[]>([])
   const [editingNomineeId, setEditingNomineeId] = useState<string | null>(null)
+
+  // ----- Bulk Actions State -----
+  const [selectedNominees, setSelectedNominees] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState<'delete' | 'move' | ''>('')
+  const [targetCategory, setTargetCategory] = useState('')
+  const [bulkProcessing, setBulkProcessing] = useState(false)
 
   // ----- Categories State -----
   const [categoryList, setCategoryList] = useState<any[]>([])
@@ -118,6 +124,7 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
     setNominees(data || [])
+    setSelectedNominees(new Set()) // clear selection on refresh
   }
 
   async function fetchCategories() {
@@ -215,6 +222,68 @@ export default function AdminPage() {
     } finally {
       setDashboardLoading(false)
     }
+  }
+
+  // ─── BULK ACTIONS ───────────────────────────────────────────
+  const toggleSelectNominee = (id: string) => {
+    setSelectedNominees(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) newSet.delete(id)
+      else newSet.add(id)
+      return newSet
+    })
+  }
+
+  const selectAll = () => {
+    if (selectedNominees.size === filteredNominees.length) {
+      setSelectedNominees(new Set())
+    } else {
+      setSelectedNominees(new Set(filteredNominees.map(n => n.id)))
+    }
+  }
+
+  const filteredNominees = useMemo(() => {
+    return nominees.filter(n => 
+      n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (n.anime_name && n.anime_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }, [nominees, searchTerm])
+
+  const executeBulkAction = async () => {
+    if (selectedNominees.size === 0) return alert('No nominees selected.')
+    if (bulkAction === 'delete') {
+      if (!confirm(`Delete ${selectedNominees.size} nominee(s)?`)) return
+      setBulkProcessing(true)
+      const { error } = await supabase
+        .from('nominees')
+        .delete()
+        .in('id', Array.from(selectedNominees))
+      if (error) {
+        alert('Error: ' + error.message)
+      } else {
+        alert(`✅ Deleted ${selectedNominees.size} nominee(s).`)
+        fetchNominees()
+      }
+      setBulkProcessing(false)
+    } else if (bulkAction === 'move') {
+      if (!targetCategory) return alert('Please select a target category.')
+      if (!confirm(`Move ${selectedNominees.size} nominee(s) to "${targetCategory}"?`)) return
+      setBulkProcessing(true)
+      const { error } = await supabase
+        .from('nominees')
+        .update({ category: targetCategory })
+        .in('id', Array.from(selectedNominees))
+      if (error) {
+        alert('Error: ' + error.message)
+      } else {
+        alert(`✅ Moved ${selectedNominees.size} nominee(s) to "${targetCategory}".`)
+        fetchNominees()
+        setTargetCategory('')
+      }
+      setBulkProcessing(false)
+    }
+    setBulkAction('')
+    setSelectedNominees(new Set())
   }
 
   // ─── NOMINEE HANDLERS ──────────────────────────────────────
@@ -478,7 +547,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation (removed Settings and Results) */}
         <div className="flex gap-4 mb-8 border-b border-white/10 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -520,26 +589,6 @@ export default function AdminPage() {
           >
             📄 Rules & Content
           </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'settings'
-                ? 'text-white border-b-2 border-orange-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            ⚙️ Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('results')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'results'
-                ? 'text-white border-b-2 border-orange-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            🏆 Results
-          </button>
         </div>
 
         {/* Dashboard Tab */}
@@ -575,7 +624,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Settings Toggle (moved from Settings tab) */}
+                {/* Settings Toggle */}
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
                   <div className="flex items-center justify-between">
                     <div>
@@ -611,7 +660,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Results Calculation (moved from Results tab) */}
+                {/* Results Calculation */}
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
                   <h3 className="font-bold mb-2">🏆 Calculate Winners</h3>
                   <p className="text-sm text-gray-400 mb-4">
@@ -636,7 +685,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Preview Winners */}
-                <h3 className="text-lg font-bold mb-3">🏆 Current Top 3 by Category (Preview)</h3>
+                <h3 className="text-lg font-bold mb-3">🏆 Preview Current Top 3 by Category </h3>
                 <div className="space-y-4">
                   {dashboardData.categoryStats.map(stat => (
                     <div key={stat.category} className="border border-white/10 rounded-lg overflow-hidden">
@@ -686,7 +735,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Nominees Tab (cleaned) */}
+        {/* Nominees Tab */}
         {activeTab === 'nominees' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
@@ -760,7 +809,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
+                <h2 className="text-xl font-bold">📋 Current Nominees </h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}
@@ -787,6 +836,51 @@ export default function AdminPage() {
                   className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500"
                 />
               </div>
+
+              {/* Bulk Actions Bar */}
+              {filteredNominees.length > 0 && (
+                <div className="mb-4 p-3 bg-slate-800/70 rounded-lg flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedNominees.size === filteredNominees.length && filteredNominees.length > 0}
+                      onChange={selectAll}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-300">
+                      {selectedNominees.size} selected
+                    </span>
+                  </div>
+                  <select
+                    value={bulkAction}
+                    onChange={(e) => setBulkAction(e.target.value as any)}
+                    className="bg-slate-700 text-white px-3 py-1 rounded border border-white/10 text-sm"
+                  >
+                    <option value="">Bulk actions</option>
+                    <option value="delete">Delete selected</option>
+                    <option value="move">Move to category</option>
+                  </select>
+                  {bulkAction === 'move' && (
+                    <select
+                      value={targetCategory}
+                      onChange={(e) => setTargetCategory(e.target.value)}
+                      className="bg-slate-700 text-white px-3 py-1 rounded border border-white/10 text-sm"
+                    >
+                      <option value="">Select category</option>
+                      {categoryList.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={executeBulkAction}
+                    disabled={bulkProcessing || !bulkAction || (bulkAction === 'move' && !targetCategory)}
+                    className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-1 rounded-full text-sm font-bold"
+                  >
+                    {bulkProcessing ? 'Processing...' : 'Apply'}
+                  </button>
+                </div>
+              )}
 
               {nominees.length === 0 ? (
                 <p className="text-gray-400">No nominees yet. Add one above!</p>
@@ -818,7 +912,13 @@ export default function AdminPage() {
                         {isExpanded && (
                           <div className="divide-y divide-white/5">
                             {catNominees.map((n) => (
-                              <div key={n.id} className="flex items-center justify-between bg-slate-900/50 p-4 hover:bg-slate-800/50 transition-colors">
+                              <div key={n.id} className="flex items-center gap-3 bg-slate-900/50 p-4 hover:bg-slate-800/50 transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedNominees.has(n.id)}
+                                  onChange={() => toggleSelectNominee(n.id)}
+                                  className="w-4 h-4"
+                                />
                                 <div className="flex-1">
                                   <p className="font-medium">{n.title}</p>
                                   {n.anime_name && <p className="text-sm text-gray-400">{n.anime_name}</p>}
@@ -851,7 +951,7 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Categories Tab (unchanged) */}
+        {/* Categories Tab */}
         {activeTab === 'categories' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
@@ -1002,7 +1102,7 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Content Tab (unchanged) */}
+        {/* Content Tab */}
         {activeTab === 'content' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
             <h2 className="text-xl font-bold mb-4">📄 Rules Page Content</h2>
@@ -1032,71 +1132,7 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
-        {/* Settings Tab (now only contains the toggle, but we moved it to Dashboard; you can remove this tab if desired) */}
-        {activeTab === 'settings' && (
-          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">Public Visibility</h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Show Results to Public</p>
-                <p className="text-sm text-gray-400">
-                  When enabled, anyone can view the winners at /results.
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  const newValue = showResults === 'true' ? 'false' : 'true'
-                  const { error } = await supabase
-                    .from('site_content')
-                    .update({ content: newValue })
-                    .eq('key', 'show_results')
-                  if (!error) {
-                    setShowResults(newValue)
-                    alert(`Results are now ${newValue === 'true' ? 'visible' : 'hidden'} to the public.`)
-                  } else {
-                    alert('Error updating setting')
-                  }
-                }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  showResults === 'true' ? 'bg-green-500' : 'bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                    showResults === 'true' ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Results Tab (now only contains the calculation button, but we moved it to Dashboard) */}
-        {activeTab === 'results' && (
-          <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">🏆 Calculate Winners</h2>
-            <p className="text-gray-400 mb-4">
-              This will compute final scores (60% public + 40% jury) and store top 3 per category in the results table.
-              Any existing results will be overwritten.
-            </p>
-            <button
-              onClick={async () => {
-                if (!confirm('This will overwrite existing results. Continue?')) return
-                  try {
-                    const { error } = await supabase.rpc('calculate_results')
-                      if (error) throw error
-                        alert('✅ Winners calculated successfully!')
-                  } catch (err: any) {
-                    alert('❌ Error: ' + err.message)
-                  }
-              }}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition">
-              🏆 Calculate Winners
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
-        }
+    }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Login from '@/components/Login'
@@ -284,7 +284,6 @@ export default function AdminPage() {
     })
   }
 
-  // ✅ FIXED: Use two separate updates instead of upsert
   async function moveCategory(categoryId: string, direction: 'up' | 'down') {
     const currentIndex = categoryList.findIndex(c => c.id === categoryId)
     if (
@@ -315,6 +314,16 @@ export default function AdminPage() {
     }
     setReordering(false)
   }
+
+  // ─── GROUP NOMINEES BY CATEGORY ─────────────────────────────
+  const groupedNominees = useMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    nominees.forEach(n => {
+      if (!grouped[n.category]) grouped[n.category] = []
+      grouped[n.category].push(n)
+    })
+    return grouped
+  }, [nominees])
 
   // ─── RENDER ────────────────────────────────────────────────
   if (loading) {
@@ -497,33 +506,49 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-              <h2 className="text-xl font-bold mb-4">📋 Current Nominees</h2>
+              <h2 className="text-xl font-bold mb-4">📋 Current Nominees (grouped by category)</h2>
               {nominees.length === 0 ? (
                 <p className="text-gray-400">No nominees yet. Add one above!</p>
               ) : (
-                <div className="space-y-4">
-                  {nominees.map((n) => (
-                    <div key={n.id} className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg">
-                      <div>
-                        <p className="font-medium">{n.title}</p>
-                        <p className="text-sm text-gray-400">{n.category} • Votes: {n.votes_public}</p>
+                <div className="space-y-6">
+                  {categoryList.map(cat => {
+                    const catNominees = groupedNominees[cat.name] || []
+                    if (catNominees.length === 0) return null // skip empty categories
+
+                    return (
+                      <div key={cat.id} className="border border-white/10 rounded-lg overflow-hidden">
+                        <div className="bg-slate-800 px-4 py-2 flex justify-between items-center">
+                          <h3 className="font-bold text-lg">{cat.name}</h3>
+                          <span className="text-sm text-gray-400">{catNominees.length} nominee(s)</span>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                          {catNominees.map((n) => (
+                            <div key={n.id} className="flex items-center justify-between bg-slate-900/50 p-4 hover:bg-slate-800/50 transition-colors">
+                              <div className="flex-1">
+                                <p className="font-medium">{n.title}</p>
+                                {n.anime_name && <p className="text-sm text-gray-400">{n.anime_name}</p>}
+                                <p className="text-xs text-gray-500 mt-1">Votes: {n.votes_public}</p>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <button
+                                  onClick={() => editNominee(n)}
+                                  className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteNominee(n.id)}
+                                  className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => editNominee(n)}
-                          className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteNominee(n.id)}
-                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -778,4 +803,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-    }
+      }

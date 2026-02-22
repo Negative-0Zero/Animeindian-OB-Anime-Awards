@@ -34,6 +34,7 @@ export default function AdminPage() {
     description: ''
   })
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [reordering, setReordering] = useState(false) // NEW: disable buttons while reordering
 
   // ----- Site Content State -----
   const [rulesContent, setRulesContent] = useState('')
@@ -102,7 +103,8 @@ export default function AdminPage() {
     const { data } = await supabase
       .from('categories')
       .select('*')
-      .order('name', { ascending: true })
+      .order('display_order', { ascending: true })  // <-- ORDER BY display_order
+      .order('name', { ascending: true })           // tie-breaker
     setCategoryList(data || [])
     if (data) {
       setCategories(data.map(c => c.name))
@@ -223,7 +225,9 @@ export default function AdminPage() {
     e.preventDefault()
     if (!categoryForm.name || !categoryForm.slug) return alert('Name and slug are required')
     const slug = categoryForm.slug || categoryForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
-    const { error } = await supabase.from('categories').insert([{ ...categoryForm, slug }])
+    // NEW: When adding, give it the highest display_order (end of list)
+    const maxOrder = categoryList.length > 0 ? Math.max(...categoryList.map(c => c.display_order || 0)) + 1 : 1
+    const { error } = await supabase.from('categories').insert([{ ...categoryForm, slug, display_order: maxOrder }])
     if (error) {
       alert('Error: ' + error.message)
     } else {
@@ -279,6 +283,36 @@ export default function AdminPage() {
       gradient: category.gradient,
       description: category.description || ''
     })
+  }
+
+  // NEW: Move category up/down
+  async function moveCategory(categoryId: string, direction: 'up' | 'down') {
+    const currentIndex = categoryList.findIndex(c => c.id === categoryId)
+    if (
+      (direction === 'up' && currentIndex === 0) ||
+      (direction === 'down' && currentIndex === categoryList.length - 1)
+    ) return // Can't move beyond bounds
+
+    const swapWithIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    const currentCat = categoryList[currentIndex]
+    const swapCat = categoryList[swapWithIndex]
+
+    setReordering(true)
+
+    // Swap display_order values
+    const { error } = await supabase
+      .from('categories')
+      .upsert([
+        { id: currentCat.id, display_order: swapCat.display_order },
+        { id: swapCat.id, display_order: currentCat.display_order }
+      ])
+
+    if (!error) {
+      await fetchCategories() // refresh list
+    } else {
+      alert('Error reordering: ' + error.message)
+    }
+    setReordering(false)
   }
 
   // ─── RENDER ────────────────────────────────────────────────
@@ -608,11 +642,34 @@ export default function AdminPage() {
                         <p className="text-sm text-gray-400">Slug: {cat.slug} • Icon: {cat.icon_name}</p>
                         {cat.description && <p className="text-xs text-gray-500 mt-1">{cat.description}</p>}
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => editCategory(cat)} className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50">
+                      <div className="flex gap-2 items-center">
+                        {/* NEW: Up/Down buttons */}
+                        <button
+                          onClick={() => moveCategory(cat.id, 'up')}
+                          disabled={reordering}
+                          className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
+                          title="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={() => moveCategory(cat.id, 'down')}
+                          disabled={reordering}
+                          className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
+                          title="Move down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          onClick={() => editCategory(cat)}
+                          className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
+                        >
                           Edit
                         </button>
-                        <button onClick={() => deleteCategory(cat.id)} className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50">
+                        <button
+                          onClick={() => deleteCategory(cat.id)}
+                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
+                        >
                           Delete
                         </button>
                       </div>
@@ -717,10 +774,8 @@ export default function AdminPage() {
               🏆 Calculate Winners
             </button>
           </div>
-    )}
+        )}
       </div>
     </div>
   )
-}
-
-
+          }

@@ -4,6 +4,19 @@ import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Login from '@/components/Login'
+import {
+  // Existing icons (keep all)
+  Trophy, Calendar, Star, Flame, Heart, Zap,
+  Clapperboard, Mic, Tv, ArrowRight,
+  Sword, Crown, Award, Medal, Sparkles, Camera, Film,
+  Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
+  Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond,
+  // New icons for UI elements
+  ClipboardList, Tags, FileText, Settings, BarChart3,
+  Pencil, Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown,
+  Check, Search, RefreshCw, Save, Lock, Ban, TrendingUp,
+  ChevronsUpDown, ChevronsDownUp, // Vote may not exist, use ThumbsUp as fallback
+} from "lucide-react"
 
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
@@ -64,7 +77,7 @@ export default function AdminPage() {
   // ----- Rebuild Debounce -----
   let rebuildTimeout: NodeJS.Timeout;
 
-  // Available icons
+  // Available icons (unchanged)
   const iconOptions = [
     'Trophy', 'Clapperboard', 'Mic', 'Flame', 'Zap', 'Heart', 'Tv', 'Star',
     'Sword', 'Crown', 'Award', 'Medal', 'Sparkles', 'Camera', 'Film',
@@ -172,9 +185,9 @@ export default function AdminPage() {
       .eq('key', 'rules')
 
     if (error) {
-      setContentMessage('❌ Error: ' + error.message)
+      setContentMessage('Error: ' + error.message)
     } else {
-      setContentMessage('✅ Rules page updated!')
+      setContentMessage('Success: Rules page updated!')
     }
     setSavingContent(false)
   }
@@ -264,7 +277,7 @@ export default function AdminPage() {
       if (error) {
         alert('Error: ' + error.message)
       } else {
-        alert(`✅ Deleted ${selectedNominees.size} nominee(s).`)
+        alert(`Success: Deleted ${selectedNominees.size} nominee(s).`)
         fetchNominees()
       }
       setBulkProcessing(false)
@@ -279,7 +292,7 @@ export default function AdminPage() {
       if (error) {
         alert('Error: ' + error.message)
       } else {
-        alert(`✅ Moved ${selectedNominees.size} nominee(s) to "${targetCategory}".`)
+        alert(`Success: Moved ${selectedNominees.size} nominee(s) to "${targetCategory}".`)
         fetchNominees()
         setTargetCategory('')
       }
@@ -305,7 +318,7 @@ export default function AdminPage() {
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      alert('✅ Nominee added!')
+      alert('Success: Nominee added!')
       resetNomineeForm()
       fetchNominees()
     }
@@ -339,7 +352,7 @@ export default function AdminPage() {
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      alert('✅ Nominee updated!')
+      alert('Success: Nominee updated!')
       resetNomineeForm()
       fetchNominees()
     }
@@ -368,12 +381,12 @@ export default function AdminPage() {
         method: 'POST',
       });
       if (response.ok) {
-        console.log('✅ Rebuild triggered successfully');
+        console.log('Rebuild triggered successfully');
       } else {
-        console.error('❌ Rebuild trigger failed', await response.text());
+        console.error('Rebuild trigger failed', await response.text());
       }
     } catch (error) {
-      console.error('❌ Error triggering rebuild:', error);
+      console.error('Error triggering rebuild:', error);
     }
   };
 
@@ -393,7 +406,7 @@ export default function AdminPage() {
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      alert('✅ Category added!')
+      alert('Success: Category added!')
       setCategoryForm({ name: '', slug: '', icon_name: 'Trophy', color: 'group-hover:border-yellow-500/50', gradient: 'from-yellow-600/20', description: '' })
       fetchCategories()
       debouncedRebuild() // trigger rebuild for new category
@@ -418,8 +431,8 @@ export default function AdminPage() {
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      await debouncedRebuild(); // 👈 starts a new deployment (with delay)
-      alert('✅ Category updated!');
+      await debouncedRebuild();
+      alert('Success: Category updated!');
       setEditingCategoryId(null);
       setCategoryForm({ name: '', slug: '', icon_name: 'Trophy', color: 'group-hover:border-yellow-500/50', gradient: 'from-yellow-600/20', description: '' });
       fetchCategories();
@@ -427,14 +440,14 @@ export default function AdminPage() {
   }
 
   async function deleteCategory(id: string) {
-    if (!confirm('⚠️ This will also delete all nominees in this category. Are you sure?')) return
+    if (!confirm('Warning: This will also delete all nominees in this category. Are you sure?')) return
     const category = categoryList.find(c => c.id === id)
     if (category) await supabase.from('nominees').delete().eq('category', category.name)
     const { error } = await supabase.from('categories').delete().eq('id', id)
     if (!error) {
       fetchCategories()
       fetchNominees()
-      debouncedRebuild() // rebuild after deletion
+      debouncedRebuild()
     }
   }
 
@@ -477,7 +490,7 @@ export default function AdminPage() {
       alert('Error reordering: ' + (error1?.message || error2?.message))
     } else {
       await fetchCategories()
-      debouncedRebuild() // rebuild after reorder (if you want order changes reflected in nav)
+      debouncedRebuild()
     }
     setReordering(false)
   }
@@ -530,14 +543,16 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold mb-4">🔒 Admin Only</h1>
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <Lock className="text-red-400" /> Admin Only
+        </h1>
         <p className="text-gray-400 mb-4">You need to login first.</p>
         <Login compact={false} showReassurance={false} />
         <button
           onClick={() => router.push('/')}
-          className="mt-4 text-sm text-gray-400 hover:text-white"
+          className="mt-4 text-sm text-gray-400 hover:text-white flex items-center gap-1"
         >
-          ← Go to Homepage
+          <ArrowLeft size={16} /> Go to Homepage
         </button>
       </div>
     )
@@ -546,7 +561,9 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold mb-4">⛔ Access Denied</h1>
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <Ban className="text-red-400" /> Access Denied
+        </h1>
         <p className="text-gray-400 mb-4">You don't have admin permissions.</p>
         <button
           onClick={() => router.push('/')}
@@ -580,43 +597,43 @@ export default function AdminPage() {
         <div className="flex gap-4 mb-8 border-b border-white/10 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
               activeTab === 'dashboard'
                 ? 'text-white border-b-2 border-orange-500'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📊 Dashboard
+            <BarChart3 size={18} /> Dashboard
           </button>
           <button
             onClick={() => setActiveTab('nominees')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
               activeTab === 'nominees'
                 ? 'text-white border-b-2 border-orange-500'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📋 Nominees
+            <ClipboardList size={18} /> Nominees
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
               activeTab === 'categories'
                 ? 'text-white border-b-2 border-orange-500'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            🏷️ Categories
+            <Tags size={18} /> Categories
           </button>
           <button
             onClick={() => setActiveTab('content')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
               activeTab === 'content'
                 ? 'text-white border-b-2 border-orange-500'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📄 Rules & Content
+            <FileText size={18} /> Rules & Content
           </button>
         </div>
 
@@ -624,12 +641,14 @@ export default function AdminPage() {
         {activeTab === 'dashboard' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">📊 Voting Dashboard</h2>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <BarChart3 /> Voting Dashboard
+              </h2>
               <button
                 onClick={fetchDashboardData}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10 flex items-center gap-1"
               >
-                🔄 Refresh
+                <RefreshCw size={14} /> Refresh
               </button>
             </div>
 
@@ -657,7 +676,9 @@ export default function AdminPage() {
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">Show Results to Public</p>
+                      <p className="font-medium flex items-center gap-1">
+                        <Settings size={16} /> Show Results to Public
+                      </p>
                       <p className="text-sm text-gray-400">
                         When enabled, anyone can view the winners at /results.
                       </p>
@@ -691,7 +712,9 @@ export default function AdminPage() {
 
                 {/* Results Calculation */}
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-white/5 mb-8">
-                  <h3 className="font-bold mb-2">🏆 Calculate Winners</h3>
+                  <h3 className="font-bold mb-2 flex items-center gap-1">
+                    <Trophy size={16} /> Calculate Winners
+                  </h3>
                   <p className="text-sm text-gray-400 mb-4">
                     This will compute final scores (60% public + 40% jury) and store top 3 per category in the results table.
                     Any existing results will be overwritten.
@@ -702,37 +725,43 @@ export default function AdminPage() {
                       try {
                         const { error } = await supabase.rpc('calculate_results')
                         if (error) throw error
-                        alert('✅ Winners calculated successfully!')
+                        alert('Winners calculated successfully!')
                       } catch (err: any) {
-                        alert('❌ Error: ' + err.message)
+                        alert('Error: ' + err.message)
                       }
                     }}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition flex items-center gap-1"
                   >
-                    🏆 Calculate Winners
+                    <Trophy size={16} /> Calculate Winners
                   </button>
                 </div>
 
                 {/* Preview Winners */}
-                <h3 className="text-lg font-bold mb-3">🏆 Preview Current Top 3</h3>
+                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                  <Trophy size={20} /> Current Top 3 by Category (Preview)
+                </h3>
                 <div className="space-y-4">
                   {dashboardData.categoryStats.map(stat => (
                     <div key={stat.category} className="border border-white/10 rounded-lg overflow-hidden">
                       <div className="bg-slate-800 px-4 py-2 flex justify-between items-center">
                         <h4 className="font-bold">{stat.category}</h4>
-                        <span className="text-sm text-gray-400">{stat.totalVotes} votes</span>
+                        <span className="text-sm text-gray-400 flex items-center gap-1">
+                          <TrendingUp size={14} /> {stat.totalVotes} votes
+                        </span>
                       </div>
                       <div className="p-4">
                         {/* Preview Top 3 */}
                         <div className="mb-3 bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-                          <p className="text-sm text-green-400 font-semibold mb-2">🏆 Current Top 3 (Preview)</p>
+                          <p className="text-sm text-green-400 font-semibold mb-2 flex items-center gap-1">
+                            <Medal size={14} /> Current Top 3 (Preview)
+                          </p>
                           <div className="space-y-1">
                             {stat.nominees.slice(0, 3).map((n, idx) => (
                               <div key={n.id} className="flex justify-between text-sm">
-                                <span>
-                                  {idx === 0 && '🥇 '}
-                                  {idx === 1 && '🥈 '}
-                                  {idx === 2 && '🥉 '}
+                                <span className="flex items-center gap-1">
+                                  {idx === 0 && <Medal size={14} className="text-yellow-400 fill-yellow-400" />}
+                                  {idx === 1 && <Medal size={14} className="text-gray-300 fill-gray-300" />}
+                                  {idx === 2 && <Medal size={14} className="text-amber-600 fill-amber-600" />}
                                   {n.title}
                                 </span>
                                 <span className="text-gray-400">{n.votes_public || 0} votes</span>
@@ -768,8 +797,9 @@ export default function AdminPage() {
         {activeTab === 'nominees' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
-              <h2 className="text-xl font-bold mb-4">
-                {editingNomineeId ? '✏️ Edit Nominee' : '➕ Add New Nominee'}
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                {editingNomineeId ? <Pencil size={20} /> : <Plus size={20} />}
+                {editingNomineeId ? 'Edit Nominee' : 'Add New Nominee'}
               </h2>
               <form onSubmit={editingNomineeId ? updateNominee : addNominee} className="space-y-4">
                 <div>
@@ -807,7 +837,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Image URL</label>
+                  <label className="block text-sm text-gray-400 mb-1">Image URL (optional)</label>
                   <input
                     type="url"
                     value={nomineeForm.image_url}
@@ -819,8 +849,9 @@ export default function AdminPage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-all"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-all flex items-center gap-1"
                   >
+                    {editingNomineeId ? <Pencil size={16} /> : <Plus size={16} />}
                     {editingNomineeId ? 'Update Nominee' : 'Add Nominee'}
                   </button>
                   {editingNomineeId && (
@@ -838,31 +869,34 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees</h2>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <ClipboardList /> Current Nominees (grouped by category)
+                </h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}
-                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10 flex items-center gap-1"
                   >
-                    Expand All
+                    <ChevronsUpDown size={14} /> Expand All
                   </button>
                   <button
                     onClick={collapseAll}
-                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10 flex items-center gap-1"
                   >
-                    Collapse All
+                    <ChevronsDownUp size={14} /> Collapse All
                   </button>
                 </div>
               </div>
 
               {/* Search Bar */}
-              <div className="mb-6">
+              <div className="mb-6 relative">
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="🔍 Search nominees by title or anime name..."
+                  placeholder="Search nominees by title or anime name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500"
                 />
               </div>
 
@@ -904,7 +938,7 @@ export default function AdminPage() {
                   <button
                     onClick={executeBulkAction}
                     disabled={bulkProcessing || !bulkAction || (bulkAction === 'move' && !targetCategory)}
-                    className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-1 rounded-full text-sm font-bold"
+                    className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1"
                   >
                     {bulkProcessing ? 'Processing...' : 'Apply'}
                   </button>
@@ -931,8 +965,8 @@ export default function AdminPage() {
                           onClick={() => toggleCategory(cat.id)}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-lg">
-                              {isExpanded ? '▼' : '▶'}
+                            <span className="text-gray-400">
+                              {isExpanded ? <ChevronsDownUp size={16} /> : <ChevronsUpDown size={16} />}
                             </span>
                             <h3 className="font-bold text-lg">{cat.name}</h3>
                           </div>
@@ -951,20 +985,22 @@ export default function AdminPage() {
                                 <div className="flex-1">
                                   <p className="font-medium">{n.title}</p>
                                   {n.anime_name && <p className="text-sm text-gray-400">{n.anime_name}</p>}
-                                  <p className="text-xs text-gray-500 mt-1">Votes: {n.votes_public}</p>
+                                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                    <ThumbsUp size={12} /> Votes: {n.votes_public}
+                                  </p>
                                 </div>
                                 <div className="flex gap-2 ml-4">
                                   <button
                                     onClick={() => editNominee(n)}
-                                    className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
+                                    className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50 flex items-center gap-1"
                                   >
-                                    Edit
+                                    <Pencil size={12} /> Edit
                                   </button>
                                   <button
                                     onClick={() => deleteNominee(n.id)}
-                                    className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
+                                    className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50 flex items-center gap-1"
                                   >
-                                    Delete
+                                    <Trash2 size={12} /> Delete
                                   </button>
                                 </div>
                               </div>
@@ -984,8 +1020,9 @@ export default function AdminPage() {
         {activeTab === 'categories' && (
           <>
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-8">
-              <h2 className="text-xl font-bold mb-4">
-                {editingCategoryId ? '✏️ Edit Category' : '➕ Add New Category'}
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                {editingCategoryId ? <Pencil size={20} /> : <Plus size={20} />}
+                {editingCategoryId ? 'Edit Category' : 'Add New Category'}
               </h2>
               <form onSubmit={editingCategoryId ? updateCategory : addCategory} className="space-y-4">
                 <div>
@@ -1060,8 +1097,9 @@ export default function AdminPage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-all"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-all flex items-center gap-1"
                   >
+                    {editingCategoryId ? <Pencil size={16} /> : <Plus size={16} />}
                     {editingCategoryId ? 'Update Category' : 'Add Category'}
                   </button>
                   {editingCategoryId && (
@@ -1081,7 +1119,9 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-              <h2 className="text-xl font-bold mb-4">🏷️ Current Categories</h2>
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Tags /> Current Categories
+              </h2>
               {categoryList.length === 0 ? (
                 <p className="text-gray-400">No categories yet. Add one above!</p>
               ) : (
@@ -1100,7 +1140,7 @@ export default function AdminPage() {
                           className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
                           title="Move up"
                         >
-                          ↑
+                          <ArrowUp size={14} />
                         </button>
                         <button
                           onClick={() => moveCategory(cat.id, 'down')}
@@ -1108,19 +1148,19 @@ export default function AdminPage() {
                           className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
                           title="Move down"
                         >
-                          ↓
+                          <ArrowDown size={14} />
                         </button>
                         <button
                           onClick={() => editCategory(cat)}
-                          className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50"
+                          className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50 flex items-center gap-1"
                         >
-                          Edit
+                          <Pencil size={12} /> Edit
                         </button>
                         <button
                           onClick={() => deleteCategory(cat.id)}
-                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50"
+                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50 flex items-center gap-1"
                         >
-                          Delete
+                          <Trash2 size={12} /> Delete
                         </button>
                       </div>
                     </div>
@@ -1134,7 +1174,9 @@ export default function AdminPage() {
         {/* Content Tab */}
         {activeTab === 'content' && (
           <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">📄 Rules Page Content</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <FileText /> Rules Page Content
+            </h2>
             <p className="text-gray-400 text-sm mb-4">
               Edit the text below. You can use Markdown for formatting (headings, lists, bold, etc.).
             </p>
@@ -1149,12 +1191,12 @@ export default function AdminPage() {
               <button
                 onClick={saveRulesContent}
                 disabled={savingContent}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold px-6 py-3 rounded-full transition-all disabled:opacity-50"
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold px-6 py-3 rounded-full transition-all disabled:opacity-50 flex items-center gap-1"
               >
-                {savingContent ? 'Saving...' : '💾 Save Changes'}
+                <Save size={16} /> {savingContent ? 'Saving...' : 'Save Changes'}
               </button>
               {contentMessage && (
-                <span className={`text-sm ${contentMessage.includes('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`text-sm ${contentMessage.startsWith('Success') ? 'text-green-400' : 'text-red-400'}`}>
                   {contentMessage}
                 </span>
               )}
@@ -1164,5 +1206,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-    }
-
+  }

@@ -1117,59 +1117,71 @@ export default function AdminPage() {
                 </div>
               </form>
             </div>
-
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Tags /> Current Categories
               </h2>
               {categoryList.length === 0 ? (
-                <p className="text-gray-400">No categories yet. Add one above!</p>
-              ) : (
-                <div className="space-y-4">
-                  {categoryList.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg">
-                      <div>
-                        <p className="font-medium">{cat.name}</p>
-                        <p className="text-sm text-gray-400">Slug: {cat.slug} • Icon: {cat.icon_name}</p>
-                        {cat.description && <p className="text-xs text-gray-500 mt-1">{cat.description}</p>}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <button
-                          onClick={() => moveCategory(cat.id, 'up')}
-                          disabled={reordering}
-                          className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
-                          title="Move up"
-                        >
-                          <ArrowUp size={14} />
-                        </button>
-                        <button
-                          onClick={() => moveCategory(cat.id, 'down')}
-                          disabled={reordering}
-                          className="text-gray-400 hover:text-white disabled:opacity-30 px-2 py-1"
-                          title="Move down"
-                        >
-                          <ArrowDown size={14} />
-                        </button>
-                        <button
-                          onClick={() => editCategory(cat)}
-                          className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 rounded border border-blue-500/30 hover:border-blue-500/50 flex items-center gap-1"
-                        >
-                          <Pencil size={12} /> Edit
-                        </button>
-                        <button
-                          onClick={() => deleteCategory(cat.id)}
-                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded border border-red-500/30 hover:border-red-500/50 flex items-center gap-1"
-                        >
-                          <Trash2 size={12} /> Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            <p className="text-gray-400">No categories yet. Add one above!</p>
+          ) : (
+            <div className="space-y-3">
+              {categoryList.map((cat) => (
+              <div
+                key={cat.id}
+                className="flex items-start justify-between bg-slate-800/50 p-4 rounded-lg gap-4"
+                >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-lg">{cat.name}</p>
+                  <div className="text-sm text-gray-400 space-y-1">
+                    <p className="flex items-center gap-1">
+                      <Tag size={14} className="inline shrink-0" />
+                      <span className="truncate">Slug: {cat.slug || <span className="text-red-400">missing</span>}</span>
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <span className="font-mono text-xs">Icon:</span> {cat.icon_name}
+                    </p>
+                    {cat.description && (
+                  <p className="text-xs text-gray-500 line-clamp-2">{cat.description}</p>
+                )}
+                  </div>
                 </div>
-              )}
+                <div className="flex gap-2 items-center shrink-0">
+                  <button
+                    onClick={() => moveCategory(cat.id, 'up')}
+                    disabled={reordering}
+                    className="p-2 text-gray-400 hover:text-white disabled:opacity-30 rounded border border-white/10 hover:border-white/30 transition"
+                    title="Move up"
+                    >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => moveCategory(cat.id, 'down')}
+                    disabled={reordering}
+                    className="p-2 text-gray-400 hover:text-white disabled:opacity-30 rounded border border-white/10 hover:border-white/30 transition"
+                    title="Move down"
+                    >
+                    <ArrowDown size={14} />
+                  </button>
+                  <button
+                    onClick={() => editCategory(cat)}
+                    className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm px-3 py-1.5 rounded border border-blue-500/30 hover:border-blue-500/50 transition"
+                    >
+                    <Pencil size={12} /> Edit
+                  </button>
+                  <button
+                    onClick={() => deleteCategory(cat.id)}
+                    className="flex items-center gap-1 text-red-400 hover:text-red-300 text-sm px-3 py-1.5 rounded border border-red-500/30 hover:border-red-500/50 transition"
+                    >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+            </div>
+          )}
             </div>
           </>
-        )}
+    )}
 
         {/* Content Tab */}
         {activeTab === 'content' && (
@@ -1207,3 +1219,4 @@ export default function AdminPage() {
     </div>
   )
   }
+

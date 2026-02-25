@@ -61,6 +61,9 @@ export default function AdminPage() {
   const [contentMessage, setContentMessage] = useState('')
   const [showResults, setShowResults] = useState('false')
 
+  // ----- Rebuild Debounce -----
+  let rebuildTimeout: NodeJS.Timeout;
+
   // Available icons
   const iconOptions = [
     'Trophy', 'Clapperboard', 'Mic', 'Flame', 'Zap', 'Heart', 'Tv', 'Star',
@@ -124,7 +127,7 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
     setNominees(data || [])
-    setSelectedNominees(new Set()) // clear selection on refresh
+    setSelectedNominees(new Set())
   }
 
   async function fetchCategories() {
@@ -358,6 +361,28 @@ export default function AdminPage() {
     if (!error) fetchNominees()
   }
 
+  // ─── CLOUDFLARE REBUILD HOOK ────────────────────────────────
+  const triggerRebuild = async () => {
+    try {
+      const response = await fetch('https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/61bea573-fe05-49ed-89c5-512fc8fb7a60', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        console.log('✅ Rebuild triggered successfully');
+      } else {
+        console.error('❌ Rebuild trigger failed', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ Error triggering rebuild:', error);
+    }
+  };
+
+  // Debounced rebuild to avoid multiple triggers
+  const debouncedRebuild = () => {
+    clearTimeout(rebuildTimeout);
+    rebuildTimeout = setTimeout(() => triggerRebuild(), 5000); // wait 5 seconds
+  };
+
   // ─── CATEGORY HANDLERS ─────────────────────────────────────
   async function addCategory(e: React.FormEvent) {
     e.preventDefault()
@@ -371,6 +396,7 @@ export default function AdminPage() {
       alert('✅ Category added!')
       setCategoryForm({ name: '', slug: '', icon_name: 'Trophy', color: 'group-hover:border-yellow-500/50', gradient: 'from-yellow-600/20', description: '' })
       fetchCategories()
+      debouncedRebuild() // trigger rebuild for new category
     }
   }
 
@@ -392,10 +418,11 @@ export default function AdminPage() {
     if (error) {
       alert('Error: ' + error.message)
     } else {
-      alert('✅ Category updated!')
-      setEditingCategoryId(null)
-      setCategoryForm({ name: '', slug: '', icon_name: 'Trophy', color: 'group-hover:border-yellow-500/50', gradient: 'from-yellow-600/20', description: '' })
-      fetchCategories()
+      await debouncedRebuild(); // 👈 starts a new deployment (with delay)
+      alert('✅ Category updated!');
+      setEditingCategoryId(null);
+      setCategoryForm({ name: '', slug: '', icon_name: 'Trophy', color: 'group-hover:border-yellow-500/50', gradient: 'from-yellow-600/20', description: '' });
+      fetchCategories();
     }
   }
 
@@ -407,6 +434,7 @@ export default function AdminPage() {
     if (!error) {
       fetchCategories()
       fetchNominees()
+      debouncedRebuild() // rebuild after deletion
     }
   }
 
@@ -449,6 +477,7 @@ export default function AdminPage() {
       alert('Error reordering: ' + (error1?.message || error2?.message))
     } else {
       await fetchCategories()
+      debouncedRebuild() // rebuild after reorder (if you want order changes reflected in nav)
     }
     setReordering(false)
   }
@@ -547,7 +576,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Tab Navigation (removed Settings and Results) */}
+        {/* Tab Navigation */}
         <div className="flex gap-4 mb-8 border-b border-white/10 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -685,7 +714,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Preview Winners */}
-                <h3 className="text-lg font-bold mb-3">🏆 Preview Current Top 3 by Category </h3>
+                <h3 className="text-lg font-bold mb-3">🏆 Current Top 3 by Category (Preview)</h3>
                 <div className="space-y-4">
                   {dashboardData.categoryStats.map(stat => (
                     <div key={stat.category} className="border border-white/10 rounded-lg overflow-hidden">
@@ -809,7 +838,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees </h2>
+                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}

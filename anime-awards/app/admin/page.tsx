@@ -15,7 +15,7 @@ import {
   ClipboardList, Tags, FileText, Settings, BarChart3,
   Pencil, Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown,
   Check, Search, RefreshCw, Save, Lock, Ban, TrendingUp,
-  ChevronsUpDown, ChevronsDownUp,
+  ChevronsUpDown, ChevronsDownUp, Tag, Medal,
 } from "lucide-react"
 
 export default function AdminPage() {
@@ -739,7 +739,7 @@ export default function AdminPage() {
 
                 {/* Preview Winners */}
                 <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                  <Trophy size={20} /> Current Top 3 by Category (Preview)
+                  <Trophy size={20} /> Preview Current Top 3
                 </h3>
                 <div className="space-y-4">
                   {dashboardData.categoryStats.map(stat => (
@@ -871,7 +871,7 @@ export default function AdminPage() {
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <ClipboardList /> Current Nominees (grouped by category)
+                  <ClipboardList /> Current Nominees 
                 </h2>
                 <div className="flex gap-2">
                   <button
@@ -1226,3 +1226,4 @@ export default function AdminPage() {
     </div>
   )
         }
+

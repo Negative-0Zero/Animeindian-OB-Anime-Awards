@@ -15,7 +15,7 @@ import {
   ClipboardList, Tags, FileText, Settings, BarChart3,
   Pencil, Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown,
   Check, Search, RefreshCw, Save, Lock, Ban, TrendingUp,
-  ChevronsUpDown, ChevronsDownUp, Tag, Medal,
+  ChevronsUpDown, ChevronsDownUp, Tag,
 } from "lucide-react"
 
 export default function AdminPage() {
@@ -1226,4 +1226,5 @@ export default function AdminPage() {
     </div>
   )
         }
+
 

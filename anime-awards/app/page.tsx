@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
 import Footer from '@/components/Footer'
-import { 
-  Trophy, Calendar, Star, Flame, Heart, Zap, 
+import {
+  Trophy, Calendar, Star, Flame, Heart, Zap,
   Clapperboard, Mic, Tv, ArrowRight,
   Sword, Crown, Award, Medal, Sparkles, Camera, Film,
   Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
-  Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond
+  Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond,
+  FileText, Tag, ThumbsUp as ThumbsUpIcon,
+  Lock, 
 } from "lucide-react"
 
 const SEASON = {
@@ -39,9 +41,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Wait for Supabase to restore session before fetching data
     const initializeData = async () => {
-      await supabase.auth.getSession() // ensures client is ready
+      await supabase.auth.getSession()
       await fetchData()
     }
     initializeData()
@@ -52,7 +53,6 @@ export default function Home() {
     setError(null)
     
     try {
-      // 🔁 CHANGED: order by display_order (custom reorder) then name as tie-breaker
       const { data: categoriesData, error: catError } = await supabase
         .from('categories')
         .select('*')
@@ -138,7 +138,7 @@ export default function Home() {
               href="/rules"
               className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 backdrop-blur-md text-white font-bold text-lg rounded-full hover:bg-white/10 transition-all flex items-center justify-center gap-2"
             >
-              <Calendar size={20} />
+              <FileText size={20} />
               Rules & Info
             </Link>
           </div>
@@ -150,14 +150,14 @@ export default function Home() {
         <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl">
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="text-center md:text-left md:w-1/2">
-              <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                🗳️ Ready to Vote?
+              <h2 className="text-3xl font-bold mb-3 flex items-center gap-2 justify-center md:justify-start">
+                <ThumbsUpIcon className="text-yellow-400" /> Ready to Vote?
               </h2>
               <p className="text-gray-300 mb-2">
                 <span className="font-semibold text-white">One person, one vote.</span> We use secure login to ensure fairness – no duplicate votes.
               </p>
-              <p className="text-gray-400 text-sm">
-                🔐 Your email is only used for authentication and to prevent duplicate votes.
+              <p className="text-gray-400 text-sm flex items-center gap-1 justify-center md:justify-start">
+                <Lock size={14} className="text-gray-400" /> Your email is only used for authentication and to prevent duplicate votes.
               </p>
             </div>
             <div className="md:w-1/2 w-full">
@@ -171,7 +171,7 @@ export default function Home() {
       <section id="categories-section" className="max-w-7xl mx-auto px-4 py-12">
         <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl">
           <h2 className="text-3xl md:text-4xl font-bold mb-12 flex items-center justify-center gap-3 text-center">
-            <Star className="text-yellow-400 fill-yellow-400" />
+            <Tag className="text-yellow-400" />
             <span>The Categories – {SEASON.name}</span>
           </h2>
 
@@ -203,9 +203,9 @@ export default function Home() {
                       <div className="flex items-center justify-between">
                         <Link
                           href={`/category/${cat.slug}`}
-                          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold px-6 py-3 rounded-full text-sm transition-all shadow-lg inline-flex items-center justify-center"
+                          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold px-6 py-3 rounded-full text-sm transition-all shadow-lg inline-flex items-center justify-center gap-1"
                         >
-                          🗳️ Vote in this category
+                          <ThumbsUpIcon size={16} /> Vote in this category
                         </Link>
                       </div>
                     </div>
@@ -219,4 +219,4 @@ export default function Home() {
       <Footer />
     </main>
   )
-  }
+        }

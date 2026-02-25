@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
-import { Trophy } from 'lucide-react'
+import { 
+  Trophy, Check, Lock, Ban, ChevronsUpDown, ChevronsDownUp, ThumbsUp 
+} from 'lucide-react'
 
 export default function JuryPage() {
   const router = useRouter()
@@ -46,7 +48,6 @@ export default function JuryPage() {
 
   async function fetchData() {
     setLoading(true)
-    // Fetch categories sorted by display_order (for consistent order)
     const { data: cats } = await supabase
       .from('categories')
       .select('*')
@@ -54,12 +55,10 @@ export default function JuryPage() {
       .order('name', { ascending: true })
     setCategories(cats || [])
 
-    // Initialize expanded categories (all expanded by default)
     if (cats) {
       setExpandedCategories(new Set(cats.map(c => c.id)))
     }
 
-    // Fetch all nominees
     const { data: nominees } = await supabase
       .from('nominees')
       .select('*')
@@ -74,7 +73,6 @@ export default function JuryPage() {
       setNomineesByCategory(grouped)
     }
 
-    // Fetch user's existing jury votes
     if (user) {
       const { data: votes } = await supabase
         .from('votes')
@@ -113,7 +111,7 @@ export default function JuryPage() {
       }
     } else {
       setUserVotes(prev => ({ ...prev, [category]: nomineeId }))
-      alert('Jury vote recorded!')
+      alert('Success: Jury vote recorded!')
     }
   }
 
@@ -145,7 +143,9 @@ export default function JuryPage() {
   if (!user) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
-        <h1 className="text-3xl font-bold mb-4">🔒 Jury Only</h1>
+        <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+          <Lock className="text-red-400" /> Jury Only
+        </h1>
         <p className="text-gray-400 mb-6">Please log in to access the jury voting panel.</p>
         <Login compact={false} showReassurance={false} />
       </main>
@@ -155,7 +155,9 @@ export default function JuryPage() {
   if (!isJury) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
-        <h1 className="text-3xl font-bold mb-4">⛔ Access Denied</h1>
+        <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+          <Ban className="text-red-400" /> Access Denied
+        </h1>
         <p className="text-gray-400 mb-4">You do not have jury permissions.</p>
         <button
           onClick={() => router.push('/')}
@@ -178,15 +180,15 @@ export default function JuryPage() {
             <div className="flex gap-2">
               <button
                 onClick={expandAll}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10 flex items-center gap-1"
               >
-                Expand All
+                <ChevronsUpDown size={14} /> Expand All
               </button>
               <button
                 onClick={collapseAll}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10"
+                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded border border-white/10 flex items-center gap-1"
               >
-                Collapse All
+                <ChevronsDownUp size={14} /> Collapse All
               </button>
             </div>
             <button
@@ -214,14 +216,14 @@ export default function JuryPage() {
                     onClick={() => toggleCategory(cat.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-gray-400 text-lg">
-                        {isExpanded ? '▼' : '▶'}
+                      <span className="text-gray-400">
+                        {isExpanded ? <ChevronsDownUp size={18} /> : <ChevronsUpDown size={18} />}
                       </span>
                       <Trophy className="text-yellow-400" />
                       <h2 className="text-2xl font-bold">{cat.name}</h2>
                       {alreadyVoted && (
-                        <span className="bg-green-500/20 text-green-400 text-sm px-3 py-1 rounded-full">
-                          ✓ Voted
+                        <span className="bg-green-500/20 text-green-400 text-sm px-3 py-1 rounded-full flex items-center gap-1">
+                          <Check size={14} /> Voted
                         </span>
                       )}
                     </div>
@@ -259,13 +261,21 @@ export default function JuryPage() {
                                 <button
                                   onClick={() => handleVote(nominee.id, cat.name)}
                                   disabled={alreadyVoted}
-                                  className={`mt-4 w-full px-4 py-2 rounded-full font-bold transition ${
+                                  className={`mt-4 w-full px-4 py-2 rounded-full font-bold transition flex items-center justify-center gap-1 ${
                                     alreadyVoted
                                       ? 'bg-gray-600 cursor-not-allowed'
                                       : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
                                   }`}
                                 >
-                                  {alreadyVoted ? 'Vote Cast' : 'Vote as Jury'}
+                                  {alreadyVoted ? (
+                                    <>
+                                      <Check size={16} /> Vote Cast
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ThumbsUp size={16} /> Vote as Jury
+                                    </>
+                                  )}
                                 </button>
                               </div>
                             )
@@ -282,4 +292,4 @@ export default function JuryPage() {
       </div>
     </main>
   )
-                                      }
+                        }

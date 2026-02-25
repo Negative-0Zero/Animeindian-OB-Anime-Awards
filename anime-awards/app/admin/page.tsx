@@ -714,7 +714,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Preview Winners */}
-                <h3 className="text-lg font-bold mb-3">🏆 Current Top 3 by Category (Preview)</h3>
+                <h3 className="text-lg font-bold mb-3">🏆 Preview Current Top 3</h3>
                 <div className="space-y-4">
                   {dashboardData.categoryStats.map(stat => (
                     <div key={stat.category} className="border border-white/10 rounded-lg overflow-hidden">
@@ -807,7 +807,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Image URL (optional)</label>
+                  <label className="block text-sm text-gray-400 mb-1">Image URL</label>
                   <input
                     type="url"
                     value={nomineeForm.image_url}
@@ -838,7 +838,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📋 Current Nominees (grouped by category)</h2>
+                <h2 className="text-xl font-bold">📋 Current Nominees</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={expandAll}
@@ -1165,3 +1165,4 @@ export default function AdminPage() {
     </div>
   )
     }
+

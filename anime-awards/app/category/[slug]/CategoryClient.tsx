@@ -19,6 +19,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const [nextCategory, setNextCategory] = useState<{ slug: string; name: string } | null>(null)
   const [prevCategory, setPrevCategory] = useState<{ slug: string; name: string } | null>(null)
 
+  // Extract slug from prop or URL after mount
   useEffect(() => {
     if (propSlug) {
       setSlug(propSlug)
@@ -36,6 +37,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     }
   }, [propSlug])
 
+  // Fetch data once slug is known
   useEffect(() => {
     if (!slug) return
     fetchCategoryAndNeighbors()
@@ -47,30 +49,20 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     setError(null)
 
     try {
-      // Get current category via Worker
-      const categoryResult = await fetchFromAPI(`/categories?select=name,display_order&slug=eq.${slug}&limit=1`)
-      const currentCat = Array.isArray(categoryResult) ? categoryResult[0] : categoryResult
+      // Get current category details via Worker
+      const catData = await fetchFromAPI(`/categories?select=name,display_order&slug=eq.${slug}&limit=1`)
+      const currentCat = Array.isArray(catData) ? catData[0] : catData
       if (!currentCat) throw new Error('Category not found')
-
       const categoryName = currentCat.name
       setCategory(categoryName)
 
-      // Get all categories via Worker to find neighbors
+      // Fetch all categories to find neighbors
       const allCats = await fetchFromAPI('/categories?select=slug,name,display_order&order=display_order.asc')
-
       const currentIndex = allCats.findIndex((c: any) => c.slug === slug)
-      if (currentIndex > 0) {
-        setPrevCategory(allCats[currentIndex - 1])
-      } else {
-        setPrevCategory(null)
-      }
-      if (currentIndex < allCats.length - 1) {
-        setNextCategory(allCats[currentIndex + 1])
-      } else {
-        setNextCategory(null)
-      }
+      setPrevCategory(currentIndex > 0 ? allCats[currentIndex - 1] : null)
+      setNextCategory(currentIndex < allCats.length - 1 ? allCats[currentIndex + 1] : null)
 
-      // Get nominees via Worker
+      // Fetch nominees for this category
       const nomineesData = await fetchFromAPI(`/nominees?select=*&category=eq.${encodeURIComponent(categoryName)}&order=created_at.asc`)
       setNominees(nomineesData || [])
     } catch (err: any) {

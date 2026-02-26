@@ -7,6 +7,7 @@ import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
 import { ArrowLeft, ArrowRight, ThumbsUp } from 'lucide-react'
+import { fetchFromAPI } from '@/utils/api'
 
 export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const router = useRouter()
@@ -46,27 +47,18 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     setError(null)
 
     try {
-      const { data: currentCat, error: catError } = await supabase
-        .from('categories')
-        .select('name, display_order')
-        .eq('slug', slug)
-        .maybeSingle()
-
-      if (catError) throw new Error(`Category error: ${catError.message}`)
+      // Get current category via Worker
+      const categoryResult = await fetchFromAPI(`/categories?select=name,display_order&slug=eq.${slug}&limit=1`)
+      const currentCat = Array.isArray(categoryResult) ? categoryResult[0] : categoryResult
       if (!currentCat) throw new Error('Category not found')
 
       const categoryName = currentCat.name
       setCategory(categoryName)
 
-      const { data: allCats, error: allCatsError } = await supabase
-        .from('categories')
-        .select('slug, name, display_order')
-        .order('display_order', { ascending: true })
-        .order('name', { ascending: true })
+      // Get all categories via Worker to find neighbors
+      const allCats = await fetchFromAPI('/categories?select=slug,name,display_order&order=display_order.asc')
 
-      if (allCatsError) throw allCatsError
-
-      const currentIndex = allCats.findIndex(c => c.slug === slug)
+      const currentIndex = allCats.findIndex((c: any) => c.slug === slug)
       if (currentIndex > 0) {
         setPrevCategory(allCats[currentIndex - 1])
       } else {
@@ -78,14 +70,8 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
         setNextCategory(null)
       }
 
-      const { data: nomineesData, error: nomError } = await supabase
-        .from('nominees')
-        .select('*')
-        .eq('category', categoryName)
-        .order('created_at', { ascending: true })
-
-      if (nomError) throw new Error(`Nominees error: ${nomError.message}`)
-
+      // Get nominees via Worker
+      const nomineesData = await fetchFromAPI(`/nominees?select=*&category=eq.${encodeURIComponent(categoryName)}&order=created_at.asc`)
       setNominees(nomineesData || [])
     } catch (err: any) {
       console.error('Error in CategoryClient:', err)
@@ -192,6 +178,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
           </div>
         )}
 
+        {/* Category Navigation */}
         <div className="flex justify-between mt-12 pt-6 border-t border-white/10">
           {prevCategory ? (
             <Link
@@ -235,4 +222,4 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
       </section>
     </main>
   )
-  }
+}

@@ -13,7 +13,6 @@ import {
   Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
   Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond,
   FileText, Tag, ThumbsUp as ThumbsUpIcon,
-  Lock,
 } from "lucide-react"
 import { fetchFromAPI } from '@/utils/api'
 
@@ -143,12 +142,10 @@ export default function Home() {
               <h2 className="text-3xl font-bold mb-3 flex items-center gap-2 justify-center md:justify-start">
                 <ThumbsUpIcon className="text-yellow-400" /> Ready to Vote?
               </h2>
-              <p className="text-gray-300 mb-2">
+              <p className="text-gray-300">
                 <span className="font-semibold text-white">One person, one vote.</span> We use secure login to ensure fairness – no duplicate votes.
               </p>
-              <p className="text-gray-400 text-sm flex items-center gap-1 justify-center md:justify-start">
-                <Lock size={14} className="text-gray-400" /> Your email is only used for authentication and to prevent duplicate votes.
-              </p>
+              {/* Removed the email reassurance paragraph */}
             </div>
             <div className="md:w-1/2 w-full">
               <Login compact={false} showReassurance={true} />
@@ -207,4 +204,4 @@ export default function Home() {
       <Footer />
     </main>
   )
-  }
+          }

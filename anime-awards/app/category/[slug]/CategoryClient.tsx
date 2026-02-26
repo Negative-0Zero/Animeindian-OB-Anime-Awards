@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/utils/supabase/client'
 import Login from '@/components/Login'
 import VoteButton from '@/components/VoteButton'
-import { ArrowLeft, ArrowRight, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ThumbsUp, Home } from 'lucide-react' // 👈 added Home icon
 import { fetchFromAPI } from '@/utils/api'
 
 export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
@@ -19,7 +19,6 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
   const [nextCategory, setNextCategory] = useState<{ slug: string; name: string } | null>(null)
   const [prevCategory, setPrevCategory] = useState<{ slug: string; name: string } | null>(null)
 
-  // Extract slug from prop or URL after mount
   useEffect(() => {
     if (propSlug) {
       setSlug(propSlug)
@@ -37,7 +36,6 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     }
   }, [propSlug])
 
-  // Fetch data once slug is known
   useEffect(() => {
     if (!slug) return
     fetchCategoryAndNeighbors()
@@ -49,20 +47,17 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
     setError(null)
 
     try {
-      // Get current category details via Worker
       const catData = await fetchFromAPI(`/categories?select=name,display_order&slug=eq.${slug}&limit=1`)
       const currentCat = Array.isArray(catData) ? catData[0] : catData
       if (!currentCat) throw new Error('Category not found')
       const categoryName = currentCat.name
       setCategory(categoryName)
 
-      // Fetch all categories to find neighbors
       const allCats = await fetchFromAPI('/categories?select=slug,name,display_order&order=display_order.asc')
       const currentIndex = allCats.findIndex((c: any) => c.slug === slug)
       setPrevCategory(currentIndex > 0 ? allCats[currentIndex - 1] : null)
       setNextCategory(currentIndex < allCats.length - 1 ? allCats[currentIndex + 1] : null)
 
-      // Fetch nominees for this category
       const nomineesData = await fetchFromAPI(`/nominees?select=*&category=eq.${encodeURIComponent(categoryName)}&order=created_at.asc`)
       setNominees(nomineesData || [])
     } catch (err: any) {
@@ -111,7 +106,7 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between"> {/* 👈 flex container */}
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
@@ -119,6 +114,13 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
           <ArrowLeft size={20} />
           Back
         </button>
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <Home size={20} />
+          Home
+        </Link>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -214,4 +216,4 @@ export default function CategoryClient({ slug: propSlug }: { slug?: string }) {
       </section>
     </main>
   )
-}
+              }

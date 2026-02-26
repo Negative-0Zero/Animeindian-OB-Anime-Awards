@@ -13,8 +13,9 @@ import {
   Music, Radio, Gamepad, Brain, Cloud, Sun, Moon,
   Smile, ThumbsUp, Flag, Gift, Globe, Leaf, Diamond,
   FileText, Tag, ThumbsUp as ThumbsUpIcon,
-  Lock, 
+  Lock,
 } from "lucide-react"
+import { fetchFromAPI } from '@/utils/api'
 
 const SEASON = {
   name: "Winter 2026",
@@ -53,24 +54,13 @@ export default function Home() {
     setError(null)
     
     try {
-      const { data: categoriesData, error: catError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('display_order', { ascending: true })
-        .order('name', { ascending: true })
-      
-      if (catError) throw catError
+      const categoriesData = await fetchFromAPI('/categories?select=*&order=display_order.asc')
       setCategories(categoriesData || [])
-      
-      const { data: nomineesData, error: nomError } = await supabase
-        .from('nominees')
-        .select('*')
-        .order('created_at', { ascending: true })
 
-      if (nomError) throw nomError
+      const nomineesData = await fetchFromAPI('/nominees?select=*&order=created_at.asc')
 
       if (nomineesData) {
-        const grouped = nomineesData.reduce((acc, nominee) => {
+        const grouped = nomineesData.reduce((acc: any, nominee: any) => {
           if (!acc[nominee.category]) acc[nominee.category] = []
           acc[nominee.category].push(nominee)
           return acc
@@ -183,9 +173,7 @@ export default function Home() {
           {!loading && !error && categories.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {categories.map((cat) => {
-                const nomineeCount = nomineesByCategory[cat.name]?.length || 0
                 const IconComponent = iconMap[cat.icon_name] || Trophy
-                
                 return (
                   <div
                     key={cat.id}
@@ -219,4 +207,4 @@ export default function Home() {
       <Footer />
     </main>
   )
-        }
+          }

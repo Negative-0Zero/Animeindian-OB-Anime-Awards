@@ -2,24 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-.transform-3d {
-    transform-style: preserve-3d;
-    transition: transform 0.3s ease;
-}
-
 .preserve-3d {
-    transform-style: preserve-3d;
+  transform-style: preserve-3d;
 }
 
 .backface-hidden {
-    backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .transform-3d {
-    transform-style: preserve-3d;
-    transition: transform 0.1s ease;
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease;
 }
 
 .perspective-3000 {
-    perspective: 3000px;
+  perspective: 3000px;
+}
+
+.riser, .shadow {
+  backface-visibility: hidden;
 }
